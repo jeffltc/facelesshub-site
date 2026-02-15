@@ -1,17 +1,17 @@
 /** @type {import('next-sitemap').IConfig} */
 module.exports = {
-  siteUrl: 'https://facelesshub.com',
+  siteUrl: 'https://facelesschannel.net',
   generateRobotsTxt: true,
   sitemapSize: 5000,
   changefreq: 'weekly',
   priority: 0.7,
   alternateRefs: [
     {
-      href: 'https://facelesshub.com/en',
+      href: 'https://facelesschannel.net/en',
       hreflang: 'en',
     },
     {
-      href: 'https://facelesshub.com/zh',
+      href: 'https://facelesschannel.net/zh',
       hreflang: 'zh',
     },
   ],

@@ -3,7 +3,7 @@ User-agent: *
 Allow: /
 
 # Host
-Host: https://facelesshub.com
+Host: https://facelesschannel.net
 
 # Sitemaps
-Sitemap: https://facelesshub.com/sitemap.xml
+Sitemap: https://facelesschannel.net/sitemap.xml

@@ -25,7 +25,7 @@ export async function generateMetadata({
       publishedTime: post.date,
     },
     alternates: {
-      canonical: `https://facelesshub.com/${locale}/blog/${slug}`,
+      canonical: `https://facelesschannel.net/${locale}/blog/${slug}`,
       languages: {
         en: `/en/blog/${slug}`,
         zh: `/zh/blog/${slug}`,

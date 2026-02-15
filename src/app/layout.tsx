@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   },
   description:
     'Free tools, in-depth guides, and a curated directory for faceless YouTube channel creators. Build a successful channel without showing your face.',
-  metadataBase: new URL('https://facelesshub.com'),
+  metadataBase: new URL('https://facelesschannel.net'),
   openGraph: {
     type: 'website',
     siteName: 'FacelessHub',
