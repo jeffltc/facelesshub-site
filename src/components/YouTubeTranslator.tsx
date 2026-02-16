@@ -26,7 +26,8 @@ interface Language {
 }
 
 type TranslateStatus = 'idle' | 'loading' | 'success' | 'error';
-type WriteBackStatus = Record<string, 'idle' | 'loading' | 'success' | 'error'>;
+type WriteBackEntry = { state: 'idle' | 'loading' | 'success' | 'error'; error?: string };
+type WriteBackStatus = Record<string, WriteBackEntry>;
 
 export function YouTubeTranslator() {
   const { data: session, status: authStatus } = useSession();
@@ -133,7 +134,7 @@ export function YouTubeTranslator() {
     const translation = translations.find((t) => t.videoId === videoId);
     if (!translation) return;
 
-    setWriteBackStatus((prev) => ({ ...prev, [videoId]: 'loading' }));
+    setWriteBackStatus((prev) => ({ ...prev, [videoId]: { state: 'loading' } }));
 
     try {
       const res = await fetch('/api/youtube/update', {
@@ -151,16 +152,18 @@ export function YouTubeTranslator() {
         }),
       });
 
-      if (!res.ok) throw new Error('Write-back failed');
       const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
+
       const result = data.results?.[0];
       if (result?.success) {
-        setWriteBackStatus((prev) => ({ ...prev, [videoId]: 'success' }));
+        setWriteBackStatus((prev) => ({ ...prev, [videoId]: { state: 'success' } }));
       } else {
         throw new Error(result?.error ?? 'Write-back failed');
       }
-    } catch {
-      setWriteBackStatus((prev) => ({ ...prev, [videoId]: 'error' }));
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Write-back failed';
+      setWriteBackStatus((prev) => ({ ...prev, [videoId]: { state: 'error', error: msg } }));
     }
   };
 
@@ -335,7 +338,8 @@ export function YouTubeTranslator() {
               const translation = translations.find(
                 (tr) => tr.videoId === video.id
               );
-              const wbStatus = writeBackStatus[video.id] ?? 'idle';
+              const wb = writeBackStatus[video.id] ?? { state: 'idle' };
+              const wbStatus = wb.state;
 
               return (
                 <div
@@ -424,6 +428,11 @@ export function YouTubeTranslator() {
                           </button>
                         </div>
                       </div>
+                      {wb.error && (
+                        <div className="mb-3 text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded p-2">
+                          {wb.error}
+                        </div>
+                      )}
                       <div className="space-y-2">
                         <div>
                           <span className="text-xs text-text-secondary">

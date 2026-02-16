@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
         });
 
         const video = videoRes.data.items?.[0];
-        if (!video) {
+        if (!video || !video.snippet) {
           results.push({
             videoId,
             success: false,
@@ -86,6 +86,26 @@ export async function POST(request: NextRequest) {
           };
         }
 
+        // YouTube API requires defaultLanguage to be set before adding localizations.
+        // If not set, default to 'en' (the most common case for YouTube videos).
+        const needsDefaultLang = !video.snippet.defaultLanguage;
+
+        if (needsDefaultLang) {
+          video.snippet.defaultLanguage = 'en';
+          await youtube.videos.update({
+            part: ['snippet'],
+            requestBody: {
+              id: videoId,
+              snippet: {
+                title: video.snippet.title!,
+                description: video.snippet.description ?? '',
+                categoryId: video.snippet.categoryId!,
+                defaultLanguage: 'en',
+              },
+            },
+          });
+        }
+
         // Update the video with new localizations
         await youtube.videos.update({
           part: ['localizations'],
@@ -99,6 +119,7 @@ export async function POST(request: NextRequest) {
       } catch (error: unknown) {
         const message =
           error instanceof Error ? error.message : 'Update failed';
+        console.error(`YouTube update failed for ${videoId}:`, error);
         results.push({ videoId, success: false, error: message });
       }
     }
