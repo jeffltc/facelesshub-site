@@ -26,11 +26,13 @@ export default function ToolsPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {tools.map((tool) => (
-          <div
-            key={tool.slug}
-            className="group p-6 bg-surface border border-border rounded-xl hover:border-primary transition-colors"
-          >
+        {tools.map((tool) => {
+          const isActive = tool.status === 'active';
+          const cardClass =
+            'group p-6 bg-surface border border-border rounded-xl transition-colors' +
+            (isActive ? ' hover:border-primary cursor-pointer' : ' opacity-70 cursor-not-allowed');
+
+          const inner = (
             <div className="flex items-start gap-4">
               <div className="text-4xl">{tool.icon}</div>
               <div className="flex-1">
@@ -52,8 +54,22 @@ export default function ToolsPage() {
                 </span>
               </div>
             </div>
-          </div>
-        ))}
+          );
+
+          return isActive ? (
+            <Link
+              key={tool.slug}
+              href={`/tools/${tool.slug}`}
+              className={cardClass}
+            >
+              {inner}
+            </Link>
+          ) : (
+            <div key={tool.slug} className={cardClass}>
+              {inner}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
