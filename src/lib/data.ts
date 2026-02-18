@@ -20,6 +20,15 @@ export const tools: Tool[] = [
     category: 'Growth',
   },
   {
+    slug: 'youtube-thumbnail-downloader',
+    title: 'YouTube Thumbnail Downloader',
+    description:
+      'Download YouTube video thumbnails in all available resolutions — HD, SD, HQ, MQ, and default. Paste any YouTube URL and save thumbnails instantly.',
+    icon: '🖼️',
+    status: 'active',
+    category: 'Design',
+  },
+  {
     slug: 'thumbnail-analyzer',
     title: 'Thumbnail Analyzer',
     description:
