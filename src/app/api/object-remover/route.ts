@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
+import Replicate from 'replicate';
 
 const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+const MODEL = 'zylim0702/remove-object:0e3a841c913f597c1e4c321560aa69e2bc1f15c65f8c366caafc379240efd8ba';
 
 export async function POST(request: NextRequest) {
-  const apiKey = process.env.CLIPDROP_API_KEY;
-  if (!apiKey) {
+  const token = process.env.REPLICATE_API_TOKEN;
+  if (!token) {
     return NextResponse.json(
-      { error: 'API key not configured' },
+      { error: 'API token not configured' },
       { status: 500 }
     );
   }
@@ -15,10 +17,7 @@ export async function POST(request: NextRequest) {
   try {
     formData = await request.formData();
   } catch {
-    return NextResponse.json(
-      { error: 'Invalid form data' },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: 'Invalid form data' }, { status: 400 });
   }
 
   const imageFile = formData.get('image') as File | null;
@@ -38,37 +37,34 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const form = new FormData();
-  form.append('image_file', imageFile);
-  form.append('mask_file', maskFile);
-  form.append('mode', 'quality');
+  const replicate = new Replicate({ auth: token });
 
   try {
-    const res = await fetch('https://clipdrop-api.co/cleanup/v1', {
-      method: 'POST',
-      headers: { 'x-api-key': apiKey },
-      body: form,
+    // Replicate SDK v1.x accepts Blob/File directly and auto-uploads them
+    const output = await replicate.run(MODEL, {
+      input: {
+        image: imageFile,
+        mask: maskFile,
+      },
     });
 
-    if (!res.ok) {
-      const text = await res.text();
-      console.error('Clipdrop error:', res.status, text);
-      return NextResponse.json(
-        { error: `Clipdrop API error: ${res.status}` },
-        { status: res.status >= 400 && res.status < 500 ? 400 : 500 }
-      );
+    // output is a FileOutput with .url() method
+    const resultUrl = (output as { url: () => URL }).url().toString();
+    const imgRes = await fetch(resultUrl);
+    if (!imgRes.ok) {
+      throw new Error(`Failed to fetch result: ${imgRes.status}`);
     }
 
-    const resultBytes = await res.arrayBuffer();
+    const imgBytes = await imgRes.arrayBuffer();
 
-    return new NextResponse(resultBytes, {
+    return new NextResponse(imgBytes, {
       headers: {
         'Content-Type': 'image/png',
         'Content-Disposition': 'attachment; filename="removed.png"',
       },
     });
   } catch (err) {
-    console.error('Object remover error:', err);
+    console.error('Replicate error:', err);
     return NextResponse.json(
       { error: 'Failed to process image' },
       { status: 500 }
