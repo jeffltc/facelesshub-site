@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { signIn, useSession } from 'next-auth/react';
+import { Link } from '@/i18n/navigation';
 
 interface MonitorConfig {
   id: string;
@@ -221,9 +222,19 @@ export function KeywordMonitor() {
         </p>
       </div>
 
+      {/* Link to feed */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-bold text-text-primary">Your Monitors</h2>
+        <Link
+          href="/tools/keyword-monitor/feed"
+          className="text-sm text-primary hover:underline flex items-center gap-1"
+        >
+          View video feed →
+        </Link>
+      </div>
+
       {/* Existing configs */}
       <div>
-        <h2 className="text-lg font-bold text-text-primary mb-4">Your Monitors</h2>
 
         {loading ? (
           <p className="text-text-secondary text-sm">Loading...</p>

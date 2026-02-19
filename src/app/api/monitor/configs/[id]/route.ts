@@ -15,9 +15,9 @@ export async function DELETE(
 
   const { error } = await supabase
     .from('monitor_configs')
-    .delete()
+    .update({ active: false })
     .eq('id', id)
-    .eq('owner_email', session.user.email); // only delete own records
+    .eq('owner_email', session.user.email); // only update own records
 
   if (error) return Response.json({ error: error.message }, { status: 500 });
   return new Response(null, { status: 204 });

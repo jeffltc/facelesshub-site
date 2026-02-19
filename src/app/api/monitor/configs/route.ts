@@ -12,6 +12,7 @@ export async function GET() {
     .from('monitor_configs')
     .select('id, keyword, ratio_min, notify_email, label, active, created_at')
     .eq('owner_email', session.user.email)
+    .eq('active', true)
     .order('created_at', { ascending: false });
 
   if (error) return Response.json({ error: error.message }, { status: 500 });
