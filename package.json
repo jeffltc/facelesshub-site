@@ -11,6 +11,9 @@
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
+    "@marsidev/react-turnstile": "^1.4.2",
+    "@upstash/ratelimit": "^2.0.8",
+    "@upstash/redis": "^1.36.2",
     "googleapis": "^171.4.0",
     "gray-matter": "^4.0.3",
     "next": "16.1.6",

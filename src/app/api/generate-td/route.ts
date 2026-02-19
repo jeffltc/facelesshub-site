@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI, Part } from '@google/generative-ai';
+import { checkRateLimit, getIP } from '@/lib/rateLimit';
+import { verifyTurnstile } from '@/lib/turnstile';
 
 const SYSTEM_PROMPT = `You are a YouTube SEO expert who specializes in crafting high-performing video titles and descriptions.
 
@@ -23,13 +25,21 @@ Rules for Description:
 Respond ONLY with valid JSON in this exact format:
 {"title": "...", "description": "..."}`;
 
+const MAX_REQUIREMENT_LENGTH = 2000;
+const MAX_REFERENCE_LENGTH = 5000;
+
 interface GenerateRequest {
   referenceTDs?: string;
   requirement: string;
   image?: string; // base64 data URL
+  turnstileToken?: string;
 }
 
 export async function POST(request: NextRequest) {
+  // Rate limit: 20 requests per IP per hour
+  const rateLimitRes = await checkRateLimit(request, 'rl:generate-td', 20, '1 h');
+  if (rateLimitRes) return rateLimitRes;
+
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     return NextResponse.json(
@@ -40,11 +50,36 @@ export async function POST(request: NextRequest) {
 
   try {
     const body: GenerateRequest = await request.json();
-    const { referenceTDs, requirement, image } = body;
+    const { referenceTDs, requirement, image, turnstileToken } = body;
+
+    // Turnstile verification
+    const ip = getIP(request);
+    const turnstileOk = await verifyTurnstile(turnstileToken ?? null, ip);
+    if (!turnstileOk) {
+      return NextResponse.json(
+        { error: 'Human verification failed. Please try again.' },
+        { status: 403 }
+      );
+    }
 
     if (!requirement?.trim()) {
       return NextResponse.json(
         { error: 'Requirement is required' },
+        { status: 400 }
+      );
+    }
+
+    // Input length limits
+    if (requirement.length > MAX_REQUIREMENT_LENGTH) {
+      return NextResponse.json(
+        { error: `Requirement must be under ${MAX_REQUIREMENT_LENGTH} characters` },
+        { status: 400 }
+      );
+    }
+
+    if (referenceTDs && referenceTDs.length > MAX_REFERENCE_LENGTH) {
+      return NextResponse.json(
+        { error: `Reference text must be under ${MAX_REFERENCE_LENGTH} characters` },
         { status: 400 }
       );
     }
@@ -67,7 +102,6 @@ export async function POST(request: NextRequest) {
       systemInstruction: SYSTEM_PROMPT,
     });
 
-    // Build the prompt
     let userPrompt = `Generate a YouTube title and description based on the following:\n\n`;
     userPrompt += `**User Requirement:** ${requirement}\n\n`;
 
@@ -81,11 +115,9 @@ export async function POST(request: NextRequest) {
 
     userPrompt += `Generate one optimized YouTube title and description. Respond with JSON only.`;
 
-    // Build parts array for multimodal
     const parts: Part[] = [{ text: userPrompt }];
 
     if (image) {
-      // Extract mime type and base64 data
       const match = image.match(/^data:(.+?);base64,(.+)$/);
       if (match) {
         parts.push({
@@ -100,7 +132,6 @@ export async function POST(request: NextRequest) {
     const result = await model.generateContent(parts);
     const text = result.response.text();
 
-    // Extract JSON from response
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       return NextResponse.json(

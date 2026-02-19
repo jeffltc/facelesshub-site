@@ -2,6 +2,8 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
+import { TurnstileWidget } from './TurnstileWidget';
+import type { TurnstileInstance } from '@marsidev/react-turnstile';
 
 type Step = 'upload' | 'draw' | 'result';
 
@@ -16,9 +18,12 @@ export function ObjectRemover() {
   const [errorMsg, setErrorMsg] = useState('');
   const [brushSize, setBrushSize] = useState(30);
 
+  const [turnstileToken, setTurnstileToken] = useState('');
+
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const turnstileRef = useRef<TurnstileInstance>(null);
   const undoStack = useRef<ImageData[]>([]);
   const isDrawing = useRef(false);
 
@@ -139,6 +144,9 @@ export function ObjectRemover() {
         const form = new FormData();
         form.append('image', imageFile);
         form.append('mask', maskBlob, 'mask.png');
+        if (turnstileToken) {
+          form.append('cf-turnstile-response', turnstileToken);
+        }
 
         const res = await fetch('/api/object-remover', {
           method: 'POST',
@@ -158,6 +166,9 @@ export function ObjectRemover() {
         setErrorMsg(err instanceof Error ? err.message : t('error_generic'));
       } finally {
         setLoading(false);
+        // Reset Turnstile so token can only be used once
+        turnstileRef.current?.reset();
+        setTurnstileToken('');
       }
     }, 'image/png');
   };
@@ -302,6 +313,14 @@ export function ObjectRemover() {
           <p className="text-sm text-red-400">{errorMsg}</p>
         )}
 
+        {/* Turnstile */}
+        <TurnstileWidget
+          ref={turnstileRef}
+          onSuccess={setTurnstileToken}
+          onExpire={() => setTurnstileToken('')}
+          onError={() => setTurnstileToken('')}
+        />
+
         <div className="flex gap-3">
           <button
             onClick={handleNewImage}
@@ -311,7 +330,10 @@ export function ObjectRemover() {
           </button>
           <button
             onClick={handleRemove}
-            disabled={loading}
+            disabled={
+              loading ||
+              (!!process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY && !turnstileToken)
+            }
             className="flex-1 px-6 py-2.5 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? t('removing') : t('remove_button')}

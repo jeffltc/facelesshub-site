@@ -2,6 +2,8 @@
 
 import { useState, useRef } from 'react';
 import { useTranslations } from 'next-intl';
+import { TurnstileWidget } from './TurnstileWidget';
+import type { TurnstileInstance } from '@marsidev/react-turnstile';
 
 export function TDGenerator() {
   const t = useTranslations('td_generator');
@@ -15,8 +17,10 @@ export function TDGenerator() {
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [error, setError] = useState('');
   const [copied, setCopied] = useState<'title' | 'desc' | 'all' | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState('');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const turnstileRef = useRef<TurnstileInstance>(null);
 
   const handleImageUpload = (file: File) => {
     if (file.size > 1024 * 1024) {
@@ -58,6 +62,7 @@ export function TDGenerator() {
           referenceTDs: referenceTDs || undefined,
           requirement,
           image: image || undefined,
+          turnstileToken: turnstileToken || undefined,
         }),
       });
 
@@ -73,6 +78,10 @@ export function TDGenerator() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Generation failed');
       setStatus('error');
+    } finally {
+      // Reset Turnstile so token can only be used once
+      turnstileRef.current?.reset();
+      setTurnstileToken('');
     }
   };
 
@@ -181,10 +190,22 @@ export function TDGenerator() {
         </div>
       </div>
 
+      {/* Turnstile */}
+      <TurnstileWidget
+        ref={turnstileRef}
+        onSuccess={setTurnstileToken}
+        onExpire={() => setTurnstileToken('')}
+        onError={() => setTurnstileToken('')}
+      />
+
       {/* Generate Button */}
       <button
         onClick={handleGenerate}
-        disabled={!requirement.trim() || status === 'loading'}
+        disabled={
+          !requirement.trim() ||
+          status === 'loading' ||
+          (!!process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY && !turnstileToken)
+        }
         className="w-full bg-primary hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium rounded-lg px-6 py-3.5 transition-colors text-base"
       >
         {status === 'loading' ? (

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { auth } from '@/lib/auth';
+import { checkRateLimit } from '@/lib/rateLimit';
 
 const FREE_LANGUAGES = ['en', 'zh', 'ja', 'es'] as const;
 
@@ -38,6 +39,10 @@ interface TranslateRequest {
 }
 
 export async function POST(request: NextRequest) {
+  // Rate limit: 10 requests per IP per 10 minutes
+  const rateLimitRes = await checkRateLimit(request, 'rl:translate', 10, '10 m');
+  if (rateLimitRes) return rateLimitRes;
+
   const session = await auth();
   if (!session?.accessToken) {
     return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
