@@ -3,11 +3,33 @@ import { getTranslations } from 'next-intl/server';
 import { Link } from '@/i18n/navigation';
 import { tools } from '@/lib/data';
 
-export async function generateMetadata() {
+const SITE_URL = 'https://facelesschannel.net';
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
   const t = await getTranslations('tools');
   return {
     title: t('title'),
     description: t('description'),
+    openGraph: {
+      title: t('title'),
+      description: t('description'),
+      url: `${SITE_URL}/${locale}/tools`,
+    },
+    alternates: {
+      canonical: `${SITE_URL}/${locale}/tools`,
+      languages: {
+        en: `${SITE_URL}/en/tools`,
+        zh: `${SITE_URL}/zh/tools`,
+        ja: `${SITE_URL}/ja/tools`,
+        ko: `${SITE_URL}/ko/tools`,
+        de: `${SITE_URL}/de/tools`,
+      },
+    },
   };
 }
 

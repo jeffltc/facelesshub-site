@@ -8,7 +8,7 @@ import { ReadingProgress } from '@/components/ReadingProgress';
 const SITE_URL = 'https://facelesschannel.net';
 
 export async function generateStaticParams() {
-  const locales = ['en', 'zh'];
+  const locales = ['en', 'zh', 'ja', 'ko', 'de'];
   const params: { locale: string; slug: string }[] = [];
   for (const locale of locales) {
     const slugs = getAllBlogSlugs(locale);
@@ -52,6 +52,9 @@ export async function generateMetadata({
       languages: {
         en: `${SITE_URL}/en/blog/${slug}`,
         zh: `${SITE_URL}/zh/blog/${slug}`,
+        ja: `${SITE_URL}/ja/blog/${slug}`,
+        ko: `${SITE_URL}/ko/blog/${slug}`,
+        de: `${SITE_URL}/de/blog/${slug}`,
       },
     },
   };

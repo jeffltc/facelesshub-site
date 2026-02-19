@@ -20,7 +20,7 @@ const CATEGORY_STYLES: Record<string, { gradient: string; icon: string }> = {
 };
 
 export async function generateStaticParams() {
-  const locales = ['en', 'zh'];
+  const locales = ['en', 'zh', 'ja', 'ko', 'de'];
   const params: { locale: string; category: string }[] = [];
   for (const locale of locales) {
     for (const cat of Object.keys(CATEGORY_META)) {
@@ -49,6 +49,13 @@ export async function generateMetadata({
     },
     alternates: {
       canonical: `${SITE_URL}/${locale}/blog/category/${category}`,
+      languages: {
+        en: `${SITE_URL}/en/blog/category/${category}`,
+        zh: `${SITE_URL}/zh/blog/category/${category}`,
+        ja: `${SITE_URL}/ja/blog/category/${category}`,
+        ko: `${SITE_URL}/ko/blog/category/${category}`,
+        de: `${SITE_URL}/de/blog/category/${category}`,
+      },
     },
   };
 }

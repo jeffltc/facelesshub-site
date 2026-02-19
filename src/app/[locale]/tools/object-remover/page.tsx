@@ -3,8 +3,16 @@ import { getTranslations } from 'next-intl/server';
 import { Link } from '@/i18n/navigation';
 import { ObjectRemover } from '@/components/ObjectRemover';
 
-export async function generateMetadata() {
+const SITE_URL = 'https://facelesschannel.net';
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
   const t = await getTranslations('object_remover');
+  const ogImage = `${SITE_URL}/api/og?title=${encodeURIComponent('AI Object Remover')}&category=${encodeURIComponent('Tools')}`;
   return {
     title: t('page_title'),
     description: t('page_desc'),
@@ -12,6 +20,24 @@ export async function generateMetadata() {
       title: t('page_title'),
       description: t('page_desc'),
       type: 'website',
+      url: `${SITE_URL}/${locale}/tools/object-remover`,
+      images: [{ url: ogImage, width: 1200, height: 630 }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: t('page_title'),
+      description: t('page_desc'),
+      images: [ogImage],
+    },
+    alternates: {
+      canonical: `${SITE_URL}/${locale}/tools/object-remover`,
+      languages: {
+        en: `${SITE_URL}/en/tools/object-remover`,
+        zh: `${SITE_URL}/zh/tools/object-remover`,
+        ja: `${SITE_URL}/ja/tools/object-remover`,
+        ko: `${SITE_URL}/ko/tools/object-remover`,
+        de: `${SITE_URL}/de/tools/object-remover`,
+      },
     },
   };
 }

@@ -7,14 +7,11 @@ module.exports = {
   priority: 0.7,
   exclude: ['/api/*', '/*/api/*'],
   alternateRefs: [
-    {
-      href: 'https://facelesschannel.net/en',
-      hreflang: 'en',
-    },
-    {
-      href: 'https://facelesschannel.net/zh',
-      hreflang: 'zh',
-    },
+    { href: 'https://facelesschannel.net/en', hreflang: 'en' },
+    { href: 'https://facelesschannel.net/zh', hreflang: 'zh' },
+    { href: 'https://facelesschannel.net/ja', hreflang: 'ja' },
+    { href: 'https://facelesschannel.net/ko', hreflang: 'ko' },
+    { href: 'https://facelesschannel.net/de', hreflang: 'de' },
   ],
   transform: async (config, path) => {
     // Give blog posts higher priority and more frequent crawl
