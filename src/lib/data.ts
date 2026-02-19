@@ -2,6 +2,15 @@ import { Tool, DirectoryCategory, DirectoryTool } from './types';
 
 export const tools: Tool[] = [
   {
+    slug: 'keyword-monitor',
+    title: 'Keyword Monitor',
+    description:
+      'Get a daily email with YouTube Shorts that have exploded in views despite low subscriber counts. Track any keyword and find viral niche signals before they saturate.',
+    icon: '📡',
+    status: 'active',
+    category: 'Research',
+  },
+  {
     slug: 'td-generator',
     title: 'YouTube TD Generator',
     description:
