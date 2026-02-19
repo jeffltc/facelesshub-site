@@ -21,6 +21,9 @@ export interface BlogPost {
 function parsePost(filePath: string, slug: string): BlogPost {
   const fileContents = fs.readFileSync(filePath, 'utf8');
   const { data, content } = matter(fileContents);
+  // Strip the leading H1 from MDX content — the page header already renders
+  // post.title as an <h1>, so we don't want the duplicate from "# Title" in the file.
+  const contentWithoutTitle = content.replace(/^\s*#\s+.+\n+/, '');
   return {
     slug,
     title: data.title ?? slug,
@@ -30,7 +33,7 @@ function parsePost(filePath: string, slug: string): BlogPost {
     category: data.category ?? 'General',
     coverImage: data.coverImage,
     tags: data.tags ?? [],
-    content,
+    content: contentWithoutTitle,
   };
 }
 
