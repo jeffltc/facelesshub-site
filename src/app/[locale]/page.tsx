@@ -1,6 +1,7 @@
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import { NewsletterForm } from '@/components/NewsletterForm';
+import { getBlogPosts } from '@/lib/blog';
 
 const featuredTools = [
   {
@@ -37,38 +38,12 @@ const featuredTools = [
   },
 ];
 
-const latestPosts = [
-  {
-    slug: 'best-ai-voice-generators',
-    titleEn: '10 Best AI Voice Generators for YouTube in 2025',
-    titleZh: '2025 年 YouTube 十大 AI 语音生成器',
-    excerptEn: 'A comprehensive comparison of the top AI voice generators for creating professional faceless YouTube videos.',
-    excerptZh: '全面对比最适合创建专业无脸 YouTube 视频的 AI 语音生成器。',
-    date: '2025-01-15',
-    readTime: 8,
-    category: 'Tools',
-  },
-  {
-    slug: 'faceless-channel-ideas-2025',
-    titleEn: '20 Profitable Faceless YouTube Channel Ideas for 2025',
-    titleZh: '2025 年 20 个赚钱的无脸 YouTube 频道创意',
-    excerptEn: 'Discover the most profitable faceless YouTube channel niches that are still underserved in 2025.',
-    excerptZh: '发现 2025 年仍然未被充分开发的最赚钱无脸 YouTube 频道细分领域。',
-    date: '2025-01-10',
-    readTime: 12,
-    category: 'Strategy',
-  },
-  {
-    slug: 'monetize-faceless-channel',
-    titleEn: 'How to Monetize a Faceless YouTube Channel (Complete Guide)',
-    titleZh: '无脸 YouTube 频道变现完全指南',
-    excerptEn: 'Learn every monetization method available for faceless channels, from AdSense to affiliate marketing.',
-    excerptZh: '学习无脸频道的所有变现方法，从 AdSense 到联盟营销。',
-    date: '2025-01-05',
-    readTime: 15,
-    category: 'Monetization',
-  },
-];
+const CATEGORY_STYLES: Record<string, { gradient: string; icon: string }> = {
+  Strategy:     { gradient: 'from-indigo-600/40 to-blue-800/30',   icon: '🎯' },
+  Growth:       { gradient: 'from-emerald-600/40 to-teal-800/30',  icon: '📈' },
+  Monetization: { gradient: 'from-amber-600/40 to-orange-800/30',  icon: '💰' },
+  Tools:        { gradient: 'from-violet-600/40 to-purple-800/30', icon: '🛠️' },
+};
 
 const directoryCategories = [
   { slug: 'ai-voiceover', titleEn: 'AI Voiceover', titleZh: 'AI 配音', count: 12, icon: '🎙️' },
@@ -81,7 +56,8 @@ const directoryCategories = [
 
 export default function HomePage() {
   const t = useTranslations();
-  const isZh = false; // Will be determined by locale in real usage
+  const locale = useLocale();
+  const latestPosts = getBlogPosts(locale).slice(0, 3);
 
   return (
     <div>
@@ -166,34 +142,49 @@ export default function HomePage() {
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {latestPosts.map((post) => (
-              <Link
-                key={post.slug}
-                href={`/blog/${post.slug}` as '/blog'}
-                className="group block bg-surface border border-border rounded-xl overflow-hidden hover:border-primary transition-colors"
-              >
-                {/* Placeholder image area */}
-                <div className="h-48 bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center">
-                  <span className="text-4xl opacity-50">📝</span>
-                </div>
-                <div className="p-6">
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-xs font-medium text-accent bg-accent/10 px-2 py-1 rounded">
+            {latestPosts.map((post) => {
+              const { gradient, icon } = CATEGORY_STYLES[post.category] ?? { gradient: 'from-slate-600/40 to-slate-800/30', icon: '📝' };
+              return (
+                <Link
+                  key={post.slug}
+                  href={`/blog/${post.slug}` as '/blog'}
+                  className="group block bg-surface border border-border rounded-xl overflow-hidden hover:border-primary transition-colors"
+                >
+                  <div
+                    className={`h-48 bg-gradient-to-br ${gradient} flex flex-col items-center justify-center relative overflow-hidden`}
+                  >
+                    <div
+                      className="absolute inset-0 opacity-10"
+                      style={{
+                        backgroundImage:
+                          'radial-gradient(circle, rgba(255,255,255,0.15) 1px, transparent 1px)',
+                        backgroundSize: '24px 24px',
+                      }}
+                    />
+                    <span className="text-5xl mb-2 relative z-10">{icon}</span>
+                    <span className="text-xs font-semibold text-white/50 uppercase tracking-widest relative z-10">
                       {post.category}
                     </span>
-                    <span className="text-xs text-text-secondary">
-                      {post.readTime} min read
-                    </span>
                   </div>
-                  <h3 className="text-lg font-semibold text-text-primary mb-2 group-hover:text-primary transition-colors line-clamp-2">
-                    {post.titleEn}
-                  </h3>
-                  <p className="text-sm text-text-secondary leading-relaxed line-clamp-3">
-                    {post.excerptEn}
-                  </p>
-                </div>
-              </Link>
-            ))}
+                  <div className="p-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="text-xs font-medium text-accent bg-accent/10 px-2 py-1 rounded">
+                        {post.category}
+                      </span>
+                      <span className="text-xs text-text-secondary">
+                        {post.readTime} min read
+                      </span>
+                    </div>
+                    <h3 className="text-lg font-semibold text-text-primary mb-2 group-hover:text-primary transition-colors line-clamp-2">
+                      {post.title}
+                    </h3>
+                    <p className="text-sm text-text-secondary leading-relaxed line-clamp-3">
+                      {post.excerpt}
+                    </p>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
           <div className="text-center mt-8">
             <Link

@@ -22,6 +22,12 @@ export default async function LocaleLayout({
   return (
     <html lang={locale}>
       <head>
+        <link
+          rel="alternate"
+          type="application/rss+xml"
+          title="FacelessHub Blog RSS Feed"
+          href={`/api/feed.xml?locale=${locale}`}
+        />
         <script async src="https://www.googletagmanager.com/gtag/js?id=G-HPX3NBEYLY" />
         <script
           dangerouslySetInnerHTML={{
