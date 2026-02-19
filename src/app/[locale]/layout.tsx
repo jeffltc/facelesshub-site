@@ -21,6 +21,19 @@ export default async function LocaleLayout({
 
   return (
     <html lang={locale}>
+      <head>
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-HPX3NBEYLY" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', 'G-HPX3NBEYLY');
+            `,
+          }}
+        />
+      </head>
       <body className="min-h-screen flex flex-col antialiased">
         <NextIntlClientProvider messages={messages}>
           <Header />

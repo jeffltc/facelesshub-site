@@ -29,6 +29,15 @@ export const tools: Tool[] = [
     category: 'Design',
   },
   {
+    slug: 'object-remover',
+    title: 'Object Remover',
+    description:
+      'Remove logos, watermarks, or any unwanted object from photos with AI. Just brush over the area and let AI fill it in seamlessly.',
+    icon: '✂️',
+    status: 'active',
+    category: 'Design',
+  },
+  {
     slug: 'thumbnail-analyzer',
     title: 'Thumbnail Analyzer',
     description:
