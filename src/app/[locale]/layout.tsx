@@ -33,6 +33,7 @@ export default async function LocaleLayout({
             `,
           }}
         />
+        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8124872145037705" crossOrigin="anonymous" />
       </head>
       <body className="min-h-screen flex flex-col antialiased">
         <NextIntlClientProvider messages={messages}>
