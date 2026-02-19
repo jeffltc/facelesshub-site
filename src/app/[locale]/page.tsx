@@ -1,7 +1,44 @@
 import { useTranslations, useLocale } from 'next-intl';
+import { getTranslations } from 'next-intl/server';
 import { Link } from '@/i18n/navigation';
 import { NewsletterForm } from '@/components/NewsletterForm';
 import { getBlogPosts } from '@/lib/blog';
+
+const SITE_URL = 'https://facelesschannel.net';
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: 'hero' });
+  const ogImage = `${SITE_URL}/api/og?title=${encodeURIComponent(t('title'))}&category=Strategy`;
+
+  return {
+    title: 'FacelessHub — Tools & Guides for Faceless YouTube Creators',
+    description: t('subtitle'),
+    openGraph: {
+      title: 'FacelessHub — Build a Faceless Channel That Makes Money',
+      description: t('subtitle'),
+      url: `${SITE_URL}/${locale}`,
+      images: [{ url: ogImage, width: 1200, height: 630 }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: 'FacelessHub',
+      description: t('subtitle'),
+      images: [ogImage],
+    },
+    alternates: {
+      canonical: `${SITE_URL}/${locale}`,
+      languages: {
+        en: `${SITE_URL}/en`,
+        zh: `${SITE_URL}/zh`,
+      },
+    },
+  };
+}
 
 const featuredTools = [
   {

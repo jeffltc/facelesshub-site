@@ -3,6 +3,7 @@ import { getTranslations } from 'next-intl/server';
 import { Link } from '@/i18n/navigation';
 import { getBlogPost, getBlogPosts, getAllBlogSlugs } from '@/lib/blog';
 import { MDXContent } from '@/components/MDXContent';
+import { ReadingProgress } from '@/components/ReadingProgress';
 
 const SITE_URL = 'https://facelesschannel.net';
 
@@ -87,6 +88,8 @@ export default async function BlogPostPage({
   const { gradient, icon } = getCategoryStyle(post.category);
 
   return (
+    <>
+    <ReadingProgress />
     <article className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
       {/* Back link */}
       <Link
@@ -191,7 +194,7 @@ export default async function BlogPostPage({
         </section>
       )}
 
-      {/* JSON-LD Structured Data */}
+      {/* Article JSON-LD */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
@@ -221,6 +224,44 @@ export default async function BlogPostPage({
           }),
         }}
       />
+
+      {/* BreadcrumbList JSON-LD */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'BreadcrumbList',
+            itemListElement: [
+              {
+                '@type': 'ListItem',
+                position: 1,
+                name: 'Home',
+                item: `${SITE_URL}/${locale}`,
+              },
+              {
+                '@type': 'ListItem',
+                position: 2,
+                name: 'Blog',
+                item: `${SITE_URL}/${locale}/blog`,
+              },
+              {
+                '@type': 'ListItem',
+                position: 3,
+                name: post.category,
+                item: `${SITE_URL}/${locale}/blog/category/${post.category.toLowerCase()}`,
+              },
+              {
+                '@type': 'ListItem',
+                position: 4,
+                name: post.title,
+                item: `${SITE_URL}/${locale}/blog/${slug}`,
+              },
+            ],
+          }),
+        }}
+      />
     </article>
+    </>
   );
 }
