@@ -1,5 +1,5 @@
 import { auth } from '@/lib/auth';
-import { supabase } from '@/lib/supabase';
+import { getSupabase } from '@/lib/supabase';
 
 export async function DELETE(
   _req: Request,
@@ -11,6 +11,7 @@ export async function DELETE(
   }
 
   const { id } = await params;
+  const supabase = getSupabase();
 
   const { error } = await supabase
     .from('monitor_configs')

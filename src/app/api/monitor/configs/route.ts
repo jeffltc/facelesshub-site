@@ -1,5 +1,5 @@
 import { auth } from '@/lib/auth';
-import { supabase } from '@/lib/supabase';
+import { getSupabase } from '@/lib/supabase';
 
 export async function GET() {
   const session = await auth();
@@ -7,6 +7,7 @@ export async function GET() {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  const supabase = getSupabase();
   const { data, error } = await supabase
     .from('monitor_configs')
     .select('id, keyword, ratio_min, notify_email, label, active, created_at')
@@ -30,6 +31,7 @@ export async function POST(req: Request) {
     return Response.json({ error: 'keyword is required' }, { status: 400 });
   }
 
+  const supabase = getSupabase();
   // Free tier: max 3 active monitors per account
   const { count } = await supabase
     .from('monitor_configs')
