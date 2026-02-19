@@ -87,6 +87,11 @@ export default async function BlogPostPage({
 
   const { gradient, icon } = getCategoryStyle(post.category);
 
+  const formattedDate = new Date(post.date).toLocaleDateString(
+    locale === 'zh' ? 'zh-CN' : 'en-US',
+    { year: 'numeric', month: 'long', day: 'numeric' }
+  );
+
   return (
     <>
     <ReadingProgress />
@@ -130,7 +135,9 @@ export default async function BlogPostPage({
           <span className="text-sm text-text-secondary">
             {t('read_time', { minutes: post.readTime })}
           </span>
-          <span className="text-sm text-text-secondary">{post.date}</span>
+          <time dateTime={post.date} className="text-sm text-text-secondary">
+            {formattedDate}
+          </time>
         </div>
         <h1 className="text-3xl sm:text-4xl font-bold text-text-primary mb-4 leading-tight">
           {post.title}

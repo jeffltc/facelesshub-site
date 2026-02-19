@@ -92,13 +92,9 @@ export default function BlogPage() {
                 {/* Meta */}
                 <div className="p-6">
                   <div className="flex items-center gap-2 mb-3">
-                    <Link
-                      href={`/blog/category/${post.category.toLowerCase()}` as '/blog'}
-                      className="text-xs font-medium text-accent bg-accent/10 px-2 py-1 rounded hover:bg-accent/20 transition-colors"
-                      onClick={(e) => e.stopPropagation()}
-                    >
+                    <span className="text-xs font-medium text-accent bg-accent/10 px-2 py-1 rounded">
                       {post.category}
-                    </Link>
+                    </span>
                     <span className="text-xs text-text-secondary">
                       {t('read_time', { minutes: post.readTime })}
                     </span>
