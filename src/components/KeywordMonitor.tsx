@@ -18,6 +18,8 @@ export function KeywordMonitor() {
   const { data: session, status } = useSession();
 
   const [configs, setConfigs]     = useState<MonitorConfig[]>([]);
+  const [plan, setPlan]           = useState<string>('free');
+  const [maxMonitors, setMaxMonitors] = useState<number>(1);
   const [loading, setLoading]     = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -43,7 +45,11 @@ export function KeywordMonitor() {
       setLoading(true);
       fetch('/api/monitor/configs')
         .then(r => r.json())
-        .then(data => setConfigs(Array.isArray(data) ? data : []))
+        .then(data => {
+          setConfigs(Array.isArray(data.configs) ? data.configs : []);
+          if (data.plan) setPlan(data.plan);
+          if (data.maxMonitors) setMaxMonitors(data.maxMonitors);
+        })
         .catch(() => setError('Failed to load monitors'))
         .finally(() => setLoading(false));
     }
@@ -217,8 +223,15 @@ export function KeywordMonitor() {
         </form>
 
         <p className="text-xs text-text-secondary mt-4">
-          Free plan: up to 3 keyword monitors per account. Results delivered daily at 9:00 AM (UTC+8).
-          Only new, previously-unseen videos are included each day.
+          {plan === 'free' ? (
+            <>{configs.length}/{maxMonitors} monitor used on Free plan.{' '}
+              <Link href="/pricing" className="text-primary hover:underline">Upgrade to Pro</Link>
+              {' '}for 5 monitors + video feed.</>
+          ) : (
+            <>Plan: <span className="capitalize text-primary font-medium">{plan}</span>
+              {' '}· {configs.length}/{maxMonitors >= 99 ? '∞' : maxMonitors} monitors active.</>
+          )}{' '}
+          Results delivered daily at 9:00 AM (UTC+8).
         </p>
       </div>
 
