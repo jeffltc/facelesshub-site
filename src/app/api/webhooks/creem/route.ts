@@ -44,14 +44,25 @@ export async function POST(req: NextRequest) {
       const productId = obj?.product_id ?? obj?.productId ?? '';
       const plan      = planFromProductId(productId) ?? 'pro';
       const period    = periodFromProductId(productId) ?? 'monthly';
-      const periodEnd = obj?.current_period_end
-        ? new Date(obj.current_period_end * 1000).toISOString()
+
+      // current_period_end: try Unix timestamp first, then ISO string fields
+      const rawPeriodEnd =
+        obj?.current_period_end ?? obj?.currentPeriodEnd ??
+        obj?.ends_at ?? obj?.period_end;
+      const periodEnd = rawPeriodEnd
+        ? typeof rawPeriodEnd === 'number'
+          ? new Date(rawPeriodEnd * 1000).toISOString()
+          : new Date(rawPeriodEnd).toISOString()
         : null;
+
+      // customer_id: may be nested inside obj.customer or top-level
+      const customerId =
+        obj?.customer?.id ?? obj?.customer_id ?? obj?.customerId ?? null;
 
       await supabase.from('user_subscriptions').upsert(
         {
           email,
-          creem_customer_id:     obj?.customer_id ?? obj?.customerId,
+          creem_customer_id:     customerId,
           creem_subscription_id: obj?.id,
           plan,
           billing_period: period,
