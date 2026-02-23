@@ -26,6 +26,8 @@ export async function POST(req: NextRequest) {
 
   const event = JSON.parse(payload);
   const { eventType, object: obj } = event;
+  console.log('[creem-webhook] eventType:', eventType);
+  console.log('[creem-webhook] obj:', JSON.stringify(obj, null, 2));
 
   const supabase = getSupabase();
 
