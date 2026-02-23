@@ -109,9 +109,21 @@ export function Footer() {
         </div>
 
         {/* Bottom */}
-        <div className="mt-12 pt-8 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="mt-12 pt-8 border-t border-border space-y-4">
+          <p className="text-xs text-text-secondary/60 leading-relaxed">
+            FacelessHub uses AI technology (Google Gemini) to power its tools. Generated content is
+            not affiliated with or endorsed by Google or any other AI provider. Results may vary and
+            should be reviewed before use.
+          </p>
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-sm text-text-secondary">
-            &copy; {new Date().getFullYear()} FacelessHub. {t('copyright')}
+            &copy; {new Date().getFullYear()} FacelessHub. {t('copyright')} ·{' '}
+            <a
+              href="mailto:support@facelesschannel.net"
+              className="hover:text-primary transition-colors"
+            >
+              support@facelesschannel.net
+            </a>
           </p>
           <div className="flex items-center gap-4">
             {/* Social links - placeholder hrefs */}
