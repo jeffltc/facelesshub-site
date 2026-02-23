@@ -26,8 +26,6 @@ export async function POST(req: NextRequest) {
 
   const event = JSON.parse(payload);
   const { eventType, object: obj } = event;
-  console.log('[creem-webhook] eventType:', eventType);
-  console.log('[creem-webhook] obj:', JSON.stringify(obj, null, 2));
 
   const supabase = getSupabase();
 
@@ -43,14 +41,14 @@ export async function POST(req: NextRequest) {
     case 'checkout.completed':
     case 'subscription.active':
     case 'subscription.paid': {
-      const productId = obj?.product_id ?? obj?.productId ?? '';
+      const productId = obj?.product?.id ?? obj?.product_id ?? obj?.productId ?? '';
       const plan      = planFromProductId(productId) ?? 'pro';
       const period    = periodFromProductId(productId) ?? 'monthly';
 
-      // current_period_end: try Unix timestamp first, then ISO string fields
+      // current_period_end_date is an ISO string e.g. "2026-03-23T02:24:08.000Z"
       const rawPeriodEnd =
-        obj?.current_period_end ?? obj?.currentPeriodEnd ??
-        obj?.ends_at ?? obj?.period_end;
+        obj?.current_period_end_date ?? obj?.current_period_end ??
+        obj?.currentPeriodEnd ?? obj?.ends_at ?? obj?.period_end;
       const periodEnd = rawPeriodEnd
         ? typeof rawPeriodEnd === 'number'
           ? new Date(rawPeriodEnd * 1000).toISOString()
