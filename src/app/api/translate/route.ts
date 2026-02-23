@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { auth } from '@/lib/auth';
 import { checkRateLimit } from '@/lib/rateLimit';
+import { getPlanLimits } from '@/lib/subscription';
 
 const FREE_LANGUAGES = ['en', 'zh', 'ja', 'es'] as const;
 
@@ -56,6 +57,10 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Get plan limits
+  const email = session.user?.email ?? '';
+  const { plan, limits } = await getPlanLimits(email);
+
   try {
     const body: TranslateRequest = await request.json();
     const { items, targetLanguage } = body;
@@ -67,18 +72,30 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if language is in free tier
-    if (!FREE_LANGUAGES.includes(targetLanguage as (typeof FREE_LANGUAGES)[number])) {
+    // Check language access by plan
+    const isPremiumLang = !FREE_LANGUAGES.includes(targetLanguage as (typeof FREE_LANGUAGES)[number]);
+    if (isPremiumLang && plan === 'free') {
       return NextResponse.json(
-        { error: 'This language requires a premium plan', code: 'PREMIUM_REQUIRED' },
+        {
+          error: 'This language requires a Pro or Max plan.',
+          code: 'PLAN_LIMIT_EXCEEDED',
+          plan,
+        },
         { status: 403 }
       );
     }
 
-    if (items.length > 50) {
+    // Check batch size by plan
+    if (items.length > limits.translatorVideos) {
       return NextResponse.json(
-        { error: 'Maximum 50 videos per batch' },
-        { status: 400 }
+        {
+          error: `Your ${plan} plan allows up to ${limits.translatorVideos} videos per batch.`,
+          code: 'PLAN_LIMIT_EXCEEDED',
+          used: items.length,
+          limit: limits.translatorVideos,
+          plan,
+        },
+        { status: 429 }
       );
     }
 

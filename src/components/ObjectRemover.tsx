@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { TurnstileWidget } from './TurnstileWidget';
+import { UpgradeModal } from './UpgradeModal';
 import type { TurnstileInstance } from '@marsidev/react-turnstile';
 
 type Step = 'upload' | 'draw' | 'result';
@@ -19,6 +20,9 @@ export function ObjectRemover() {
   const [brushSize, setBrushSize] = useState(30);
 
   const [turnstileToken, setTurnstileToken] = useState('');
+  const [upgradeModal, setUpgradeModal] = useState<{
+    used: number; limit: number; plan: string;
+  } | null>(null);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
@@ -155,6 +159,10 @@ export function ObjectRemover() {
 
         if (!res.ok) {
           const data = await res.json();
+          if (data.code === 'PLAN_LIMIT_EXCEEDED') {
+            setUpgradeModal({ used: data.used, limit: data.limit, plan: data.plan });
+            return;
+          }
           throw new Error(data.error ?? t('error_generic'));
         }
 
@@ -216,6 +224,14 @@ export function ObjectRemover() {
   if (step === 'upload') {
     return (
       <div className="space-y-4">
+        <UpgradeModal
+          isOpen={!!upgradeModal}
+          onClose={() => setUpgradeModal(null)}
+          tool="object-remover"
+          used={upgradeModal?.used}
+          limit={upgradeModal?.limit}
+          plan={upgradeModal?.plan}
+        />
         <div
           className="border-2 border-dashed border-border rounded-xl p-12 text-center cursor-pointer hover:border-primary transition-colors"
           onClick={() => fileInputRef.current?.click()}
@@ -249,6 +265,14 @@ export function ObjectRemover() {
   if (step === 'draw') {
     return (
       <div className="space-y-4">
+        <UpgradeModal
+          isOpen={!!upgradeModal}
+          onClose={() => setUpgradeModal(null)}
+          tool="object-remover"
+          used={upgradeModal?.used}
+          limit={upgradeModal?.limit}
+          plan={upgradeModal?.plan}
+        />
         <p className="text-sm text-text-secondary">{t('draw_hint')}</p>
 
         {/* Canvas area */}

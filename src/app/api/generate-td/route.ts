@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI, Part } from '@google/generative-ai';
 import { checkRateLimit, getIP } from '@/lib/rateLimit';
 import { verifyTurnstile } from '@/lib/turnstile';
+import { auth } from '@/lib/auth';
+import { getPlanLimits } from '@/lib/subscription';
+import { getUsage, incrementUsage } from '@/lib/usageTracking';
 
 const SYSTEM_PROMPT = `You are a YouTube SEO expert who specializes in crafting high-performing video titles and descriptions.
 
@@ -39,6 +42,25 @@ export async function POST(request: NextRequest) {
   // Rate limit: 20 requests per IP per hour
   const rateLimitRes = await checkRateLimit(request, 'rl:generate-td', 20, '1 h');
   if (rateLimitRes) return rateLimitRes;
+
+  // Plan-based daily limit for logged-in users
+  const session = await auth();
+  if (session?.user?.email) {
+    const { plan, limits } = await getPlanLimits(session.user.email);
+    const used = await getUsage(session.user.email, 'td');
+    if (used >= limits.tdPerDay) {
+      return NextResponse.json(
+        {
+          error: `You've used all ${limits.tdPerDay} TD generations today (${plan} plan).`,
+          code: 'PLAN_LIMIT_EXCEEDED',
+          used,
+          limit: limits.tdPerDay,
+          plan,
+        },
+        { status: 429 }
+      );
+    }
+  }
 
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
@@ -141,6 +163,11 @@ export async function POST(request: NextRequest) {
     }
 
     const parsed = JSON.parse(jsonMatch[0]);
+
+    // Track usage on success
+    if (session?.user?.email) {
+      await incrementUsage(session.user.email, 'td');
+    }
 
     return NextResponse.json({
       title: parsed.title ?? '',

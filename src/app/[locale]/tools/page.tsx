@@ -2,6 +2,7 @@ import { useTranslations } from 'next-intl';
 import { getTranslations } from 'next-intl/server';
 import { Link } from '@/i18n/navigation';
 import { tools } from '@/lib/data';
+import { ToolsBanner } from '@/components/ToolsBanner';
 
 const SITE_URL = 'https://facelesschannel.net';
 
@@ -47,6 +48,7 @@ export default function ToolsPage() {
         </p>
       </div>
 
+      <ToolsBanner />
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {tools.map((tool) => {
           const isActive = tool.status === 'active';

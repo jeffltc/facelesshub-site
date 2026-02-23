@@ -3,6 +3,7 @@
 import { useState, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { TurnstileWidget } from './TurnstileWidget';
+import { UpgradeModal } from './UpgradeModal';
 import type { TurnstileInstance } from '@marsidev/react-turnstile';
 
 export function TDGenerator() {
@@ -18,6 +19,9 @@ export function TDGenerator() {
   const [error, setError] = useState('');
   const [copied, setCopied] = useState<'title' | 'desc' | 'all' | null>(null);
   const [turnstileToken, setTurnstileToken] = useState('');
+  const [upgradeModal, setUpgradeModal] = useState<{
+    used: number; limit: number; plan: string;
+  } | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const turnstileRef = useRef<TurnstileInstance>(null);
@@ -68,6 +72,11 @@ export function TDGenerator() {
 
       if (!res.ok) {
         const data = await res.json();
+        if (data.code === 'PLAN_LIMIT_EXCEEDED') {
+          setUpgradeModal({ used: data.used, limit: data.limit, plan: data.plan });
+          setStatus('idle');
+          return;
+        }
         throw new Error(data.error ?? 'Generation failed');
       }
 
@@ -93,6 +102,14 @@ export function TDGenerator() {
 
   return (
     <div className="space-y-6">
+      <UpgradeModal
+        isOpen={!!upgradeModal}
+        onClose={() => setUpgradeModal(null)}
+        tool="td"
+        used={upgradeModal?.used}
+        limit={upgradeModal?.limit}
+        plan={upgradeModal?.plan}
+      />
       {/* Reference TDs */}
       <div>
         <label className="block text-sm font-medium text-text-primary mb-2">

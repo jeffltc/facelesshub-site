@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import Replicate from 'replicate';
 import { checkRateLimit, getIP } from '@/lib/rateLimit';
 import { verifyTurnstile } from '@/lib/turnstile';
+import { auth } from '@/lib/auth';
+import { getPlanLimits } from '@/lib/subscription';
+import { getUsage, incrementUsage } from '@/lib/usageTracking';
 
 const MAX_SIZE = 10 * 1024 * 1024; // 10MB
 const MODEL = 'zylim0702/remove-object:0e3a841c913f597c1e4c321560aa69e2bc1f15c65f8c366caafc379240efd8ba';
@@ -10,6 +13,25 @@ export async function POST(request: NextRequest) {
   // Rate limit: 5 requests per IP per hour
   const rateLimitRes = await checkRateLimit(request, 'rl:object-remover', 5, '1 h');
   if (rateLimitRes) return rateLimitRes;
+
+  // Plan-based daily limit for logged-in users
+  const session = await auth();
+  if (session?.user?.email) {
+    const { plan, limits } = await getPlanLimits(session.user.email);
+    const used = await getUsage(session.user.email, 'object-remover');
+    if (used >= limits.objectRemoverPerDay) {
+      return NextResponse.json(
+        {
+          error: `You've used all ${limits.objectRemoverPerDay} object removals today (${plan} plan).`,
+          code: 'PLAN_LIMIT_EXCEEDED',
+          used,
+          limit: limits.objectRemoverPerDay,
+          plan,
+        },
+        { status: 429 }
+      );
+    }
+  }
 
   const token = process.env.REPLICATE_API_TOKEN;
   if (!token) {
@@ -71,6 +93,11 @@ export async function POST(request: NextRequest) {
     }
 
     const imgBytes = await imgRes.arrayBuffer();
+
+    // Track usage on success
+    if (session?.user?.email) {
+      await incrementUsage(session.user.email, 'object-remover');
+    }
 
     return new NextResponse(imgBytes, {
       headers: {

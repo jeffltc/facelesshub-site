@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSession, signIn } from 'next-auth/react';
 import { Link } from '@/i18n/navigation';
 
@@ -92,6 +92,16 @@ function XIcon() {
 export function PricingClient() {
   const [annual, setAnnual] = useState(false);
   const { data: session, status } = useSession();
+  const [currentPlan, setCurrentPlan] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (session?.user?.email) {
+      fetch('/api/user/plan')
+        .then((r) => r.json())
+        .then((data) => setCurrentPlan(data.plan))
+        .catch(() => {});
+    }
+  }, [session?.user?.email]);
 
   // Success / signin param feedback
   if (typeof window !== 'undefined') {
@@ -167,7 +177,14 @@ export function PricingClient() {
                   : 'border-border bg-surface'
               }`}
             >
-              {plan.highlight && (
+              {currentPlan === plan.id && (
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                  <span className="bg-green-500 text-white text-xs font-semibold px-3 py-1 rounded-full">
+                    ✓ Your plan
+                  </span>
+                </div>
+              )}
+              {plan.highlight && currentPlan !== plan.id && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                   <span className="bg-primary text-white text-xs font-semibold px-3 py-1 rounded-full">
                     Most popular

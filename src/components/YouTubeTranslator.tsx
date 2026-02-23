@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { signIn, signOut, useSession } from 'next-auth/react';
 import { useTranslations } from 'next-intl';
+import { UpgradeModal } from './UpgradeModal';
 
 interface Video {
   id: string;
@@ -43,6 +44,9 @@ export function YouTubeTranslator() {
   const [writeBackStatus, setWriteBackStatus] = useState<WriteBackStatus>({});
   const [videosLoading, setVideosLoading] = useState(false);
   const [error, setError] = useState('');
+  const [upgradeModal, setUpgradeModal] = useState<{
+    used?: number; limit?: number; plan?: string; message?: string;
+  } | null>(null);
 
   // Fetch supported languages
   useEffect(() => {
@@ -118,6 +122,16 @@ export function YouTubeTranslator() {
 
       if (!res.ok) {
         const data = await res.json();
+        if (data.code === 'PLAN_LIMIT_EXCEEDED') {
+          setUpgradeModal({
+            used: data.used,
+            limit: data.limit,
+            plan: data.plan,
+            message: data.error,
+          });
+          setTranslateStatus('idle');
+          return;
+        }
         throw new Error(data.error ?? 'Translation failed');
       }
 
@@ -226,6 +240,15 @@ export function YouTubeTranslator() {
 
   return (
     <div className="space-y-8">
+      <UpgradeModal
+        isOpen={!!upgradeModal}
+        onClose={() => setUpgradeModal(null)}
+        tool="translator"
+        used={upgradeModal?.used}
+        limit={upgradeModal?.limit}
+        plan={upgradeModal?.plan}
+        message={upgradeModal?.message}
+      />
       {/* User info bar */}
       <div className="flex items-center justify-between bg-surface border border-border rounded-lg p-4">
         <div className="flex items-center gap-3">
