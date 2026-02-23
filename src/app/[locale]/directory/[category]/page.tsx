@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { useTranslations } from 'next-intl';
+import { getTranslations } from 'next-intl/server';
 import { Link } from '@/i18n/navigation';
 import {
   directoryCategories,
@@ -35,7 +35,7 @@ export default async function CategoryPage({
   const cat = getCategory(category);
   if (!cat) notFound();
 
-  const t = useTranslations('directory');
+  const t = await getTranslations('directory');
   const categoryTools = getToolsByCategory(category);
 
   return (
