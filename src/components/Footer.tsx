@@ -89,19 +89,20 @@ export function Footer() {
             </h3>
             <ul className="space-y-2">
               <li>
-                <span className="text-sm text-text-secondary">
+                <Link
+                  href="/privacy"
+                  className="text-sm text-text-secondary hover:text-primary transition-colors"
+                >
                   {t('privacy')}
-                </span>
+                </Link>
               </li>
               <li>
-                <span className="text-sm text-text-secondary">
+                <Link
+                  href="/terms"
+                  className="text-sm text-text-secondary hover:text-primary transition-colors"
+                >
                   {t('terms')}
-                </span>
-              </li>
-              <li>
-                <span className="text-sm text-text-secondary">
-                  {t('disclaimer')}
-                </span>
+                </Link>
               </li>
             </ul>
           </div>
