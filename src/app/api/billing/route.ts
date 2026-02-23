@@ -21,6 +21,11 @@ export async function GET() {
     return Response.redirect(`${SITE_URL}/en/pricing`);
   }
 
-  const { portal_url } = await createBillingPortal(data.creem_customer_id);
-  return Response.redirect(portal_url);
+  try {
+    const { portal_url } = await createBillingPortal(data.creem_customer_id);
+    return Response.redirect(portal_url);
+  } catch (err) {
+    console.error('[billing] createBillingPortal error:', err);
+    return Response.redirect(`${SITE_URL}/en/pricing?billing_error=1`);
+  }
 }
