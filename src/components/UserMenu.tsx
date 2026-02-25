@@ -210,6 +210,13 @@ export function UserMenu() {
             >
               Account
             </Link>
+            <Link
+              href="/account/feed"
+              onClick={() => setOpen(false)}
+              className="flex items-center px-3 py-2 text-sm text-text-secondary hover:text-text-primary hover:bg-surface-hover rounded-lg transition-colors"
+            >
+              My Feed
+            </Link>
             {plan !== 'free' && (
               <a
                 href="/api/billing"

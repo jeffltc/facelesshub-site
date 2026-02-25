@@ -1,23 +1,45 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { google } from 'googleapis';
 import { auth } from '@/lib/auth';
+import { getValidChannelToken } from '@/lib/youtube-token';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const session = await auth();
-  if (!session?.accessToken) {
+  if (!session?.user?.email) {
     return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  }
+
+  const email = session.user.email;
+  const channelId = request.nextUrl.searchParams.get('channelId');
+
+  if (!channelId) {
+    return NextResponse.json({ error: 'channelId is required' }, { status: 400 });
+  }
+
+  let accessToken: string;
+  try {
+    accessToken = await getValidChannelToken(email, channelId);
+  } catch (err: unknown) {
+    const name = err instanceof Error ? err.name : '';
+    if (name === 'CHANNEL_NOT_CONNECTED') {
+      return NextResponse.json({ error: 'Channel not connected', code: 'CHANNEL_NOT_CONNECTED' }, { status: 404 });
+    }
+    if (name === 'CHANNEL_REFRESH_FAILED' || name === 'CHANNEL_TOKEN_EXPIRED_NO_REFRESH') {
+      return NextResponse.json({ error: 'Channel access expired. Please reconnect.', code: 'CHANNEL_TOKEN_EXPIRED' }, { status: 401 });
+    }
+    return NextResponse.json({ error: 'Failed to get channel token' }, { status: 500 });
   }
 
   try {
     const oauth2Client = new google.auth.OAuth2();
-    oauth2Client.setCredentials({ access_token: session.accessToken });
+    oauth2Client.setCredentials({ access_token: accessToken });
 
     const youtube = google.youtube({ version: 'v3', auth: oauth2Client });
 
-    // Get the user's channel
+    // Get the channel's uploads playlist
     const channelRes = await youtube.channels.list({
       part: ['contentDetails'],
-      mine: true,
+      id: [channelId],
     });
 
     const uploadsPlaylistId =

@@ -71,9 +71,9 @@ export function periodFromProductId(productId: string): 'monthly' | 'annual' | n
 
 // Plan limits
 export const PLAN_LIMITS = {
-  free: { monitors: 1, tdPerDay: 5,  objectRemoverPerDay: 3,  translatorVideos: 5,  translatorLanguages: 3  },
-  pro:  { monitors: 5, tdPerDay: 30, objectRemoverPerDay: 20, translatorVideos: 30, translatorLanguages: 99 },
-  max:  { monitors: 99,tdPerDay: 999,objectRemoverPerDay: 999,translatorVideos: 999,translatorLanguages: 99 },
+  free: { monitors: 1, competitorMonitors: 1,  tdPerDay: 5,   objectRemoverPerDay: 3,   translatorDailyVideos: 1,  translatorMonthlyPool: 0,   translatorMaxLanguages: 2,  maxConnectedChannels: 1  },
+  pro:  { monitors: 5, competitorMonitors: 5,  tdPerDay: 30,  objectRemoverPerDay: 20,  translatorDailyVideos: 5,  translatorMonthlyPool: 50,  translatorMaxLanguages: 8,  maxConnectedChannels: 5  },
+  max:  { monitors: 99,competitorMonitors: 20, tdPerDay: 999, objectRemoverPerDay: 999, translatorDailyVideos: 20, translatorMonthlyPool: 300, translatorMaxLanguages: 99, maxConnectedChannels: 20 },
 } as const;
 
 export type Plan = keyof typeof PLAN_LIMITS;

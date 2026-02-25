@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { google } from 'googleapis';
 import { auth } from '@/lib/auth';
+import { getValidChannelToken } from '@/lib/youtube-token';
 
 interface UpdateRequest {
+  channelId: string;
   updates: Array<{
     videoId: string;
     language: string;
@@ -13,13 +15,19 @@ interface UpdateRequest {
 
 export async function POST(request: NextRequest) {
   const session = await auth();
-  if (!session?.accessToken) {
+  if (!session?.user?.email) {
     return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   }
 
+  const email = session.user.email;
+
   try {
     const body: UpdateRequest = await request.json();
-    const { updates } = body;
+    const { channelId, updates } = body;
+
+    if (!channelId) {
+      return NextResponse.json({ error: 'channelId is required' }, { status: 400 });
+    }
 
     if (!updates?.length) {
       return NextResponse.json(
@@ -28,8 +36,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    let accessToken: string;
+    try {
+      accessToken = await getValidChannelToken(email, channelId);
+    } catch (err: unknown) {
+      const name = err instanceof Error ? err.name : '';
+      if (name === 'CHANNEL_NOT_CONNECTED') {
+        return NextResponse.json({ error: 'Channel not connected', code: 'CHANNEL_NOT_CONNECTED' }, { status: 404 });
+      }
+      if (name === 'CHANNEL_REFRESH_FAILED' || name === 'CHANNEL_TOKEN_EXPIRED_NO_REFRESH') {
+        return NextResponse.json({ error: 'Channel access expired. Please reconnect.', code: 'CHANNEL_TOKEN_EXPIRED' }, { status: 401 });
+      }
+      return NextResponse.json({ error: 'Failed to get channel token' }, { status: 500 });
+    }
+
     const oauth2Client = new google.auth.OAuth2();
-    oauth2Client.setCredentials({ access_token: session.accessToken });
+    oauth2Client.setCredentials({ access_token: accessToken });
 
     const youtube = google.youtube({ version: 'v3', auth: oauth2Client });
 
@@ -86,31 +108,24 @@ export async function POST(request: NextRequest) {
           };
         }
 
-        // YouTube API requires defaultLanguage to be set before adding localizations.
-        // If not set, default to 'en' (the most common case for YouTube videos).
-        const needsDefaultLang = !video.snippet.defaultLanguage;
+        // YouTube API requires snippet.defaultLanguage to be set before localizations
+        // can be updated. Always send snippet + localizations together in one request.
+        // Fallback chain: defaultLanguage → defaultAudioLanguage → 'en'
+        const defaultLanguage =
+          video.snippet.defaultLanguage ||
+          video.snippet.defaultAudioLanguage ||
+          'en';
 
-        if (needsDefaultLang) {
-          video.snippet.defaultLanguage = 'en';
-          await youtube.videos.update({
-            part: ['snippet'],
-            requestBody: {
-              id: videoId,
-              snippet: {
-                title: video.snippet.title!,
-                description: video.snippet.description ?? '',
-                categoryId: video.snippet.categoryId!,
-                defaultLanguage: 'en',
-              },
-            },
-          });
-        }
-
-        // Update the video with new localizations
         await youtube.videos.update({
-          part: ['localizations'],
+          part: ['snippet', 'localizations'],
           requestBody: {
             id: videoId,
+            snippet: {
+              title: video.snippet.title!,
+              description: video.snippet.description ?? '',
+              categoryId: video.snippet.categoryId!,
+              defaultLanguage,
+            },
             localizations: existingLocalizations,
           },
         });

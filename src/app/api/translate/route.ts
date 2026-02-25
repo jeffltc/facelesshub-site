@@ -3,15 +3,15 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { auth } from '@/lib/auth';
 import { checkRateLimit } from '@/lib/rateLimit';
 import { getPlanLimits } from '@/lib/subscription';
+import { getUsage, getTranslatorPoolUsage, incrementTranslatorUsage } from '@/lib/usageTracking';
 
-const FREE_LANGUAGES = ['en', 'zh', 'ja', 'es'] as const;
+export const FREE_LANGUAGES = ['en', 'zh', 'ja', 'es'] as const;
 
-const LANGUAGE_NAMES: Record<string, string> = {
+export const LANGUAGE_NAMES: Record<string, string> = {
   en: 'English',
   zh: 'Chinese (Simplified)',
   ja: 'Japanese',
   es: 'Spanish',
-  // Premium languages (reserved for future)
   ko: 'Korean',
   fr: 'French',
   de: 'German',
@@ -36,7 +36,7 @@ interface TranslateRequest {
     title: string;
     description: string;
   }>;
-  targetLanguage: string;
+  targetLanguages: string[];
 }
 
 export async function POST(request: NextRequest) {
@@ -57,27 +57,32 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Get plan limits
   const email = session.user?.email ?? '';
   const { plan, limits } = await getPlanLimits(email);
 
   try {
     const body: TranslateRequest = await request.json();
-    const { items, targetLanguage } = body;
+    const { items, targetLanguages } = body;
 
-    if (!items?.length || !targetLanguage) {
+    if (!items?.length || !targetLanguages?.length) {
       return NextResponse.json(
-        { error: 'Missing items or targetLanguage' },
+        { error: 'Missing items or targetLanguages' },
         { status: 400 }
       );
     }
 
-    // Check language access by plan
-    const isPremiumLang = !FREE_LANGUAGES.includes(targetLanguage as (typeof FREE_LANGUAGES)[number]);
-    if (isPremiumLang && plan === 'free') {
+    // Validate languages against plan access
+    const invalidLangs: string[] = [];
+    for (const lang of targetLanguages) {
+      const isPremiumLang = !FREE_LANGUAGES.includes(lang as (typeof FREE_LANGUAGES)[number]);
+      if (isPremiumLang && plan === 'free') {
+        invalidLangs.push(lang);
+      }
+    }
+    if (invalidLangs.length > 0) {
       return NextResponse.json(
         {
-          error: 'This language requires a Pro or Max plan.',
+          error: `Your free plan only supports EN/ZH/JA/ES. Upgrade for: ${invalidLangs.join(', ')}.`,
           code: 'PLAN_LIMIT_EXCEEDED',
           plan,
         },
@@ -85,14 +90,39 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check batch size by plan
-    if (items.length > limits.translatorVideos) {
+    // Check max languages
+    if (targetLanguages.length > limits.translatorMaxLanguages) {
       return NextResponse.json(
         {
-          error: `Your ${plan} plan allows up to ${limits.translatorVideos} videos per batch.`,
+          error: `Your ${plan} plan allows up to ${limits.translatorMaxLanguages} languages.`,
           code: 'PLAN_LIMIT_EXCEEDED',
-          used: items.length,
-          limit: limits.translatorVideos,
+          plan,
+        },
+        { status: 403 }
+      );
+    }
+
+    // Quota check: per-video (not per video×language)
+    const videosCount = items.length;
+    const [dailyUsed, poolUsed] = await Promise.all([
+      getUsage(email, 'translator'),
+      getTranslatorPoolUsage(email),
+    ]);
+
+    const dailyRemaining = Math.max(0, limits.translatorDailyVideos - dailyUsed);
+    const poolRemaining = Math.max(0, limits.translatorMonthlyPool - poolUsed);
+
+    if (dailyRemaining + poolRemaining < videosCount) {
+      return NextResponse.json(
+        {
+          error: 'Daily and monthly quota exceeded.',
+          code: 'QUOTA_EXCEEDED',
+          dailyUsed,
+          dailyLimit: limits.translatorDailyVideos,
+          dailyRemaining,
+          poolUsed,
+          poolLimit: limits.translatorMonthlyPool,
+          poolRemaining,
           plan,
         },
         { status: 429 }
@@ -102,19 +132,21 @@ export async function POST(request: NextRequest) {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
-    const targetLangName = LANGUAGE_NAMES[targetLanguage] ?? targetLanguage;
+    // Translate per language sequentially
+    const translationsByLang: Record<
+      string,
+      Array<{ videoId: string; translatedTitle: string; translatedDescription: string }>
+    > = {};
 
-    // Translate in batches of 10
-    const results: Array<{
-      videoId: string;
-      translatedTitle: string;
-      translatedDescription: string;
-    }> = [];
+    for (const lang of targetLanguages) {
+      const targetLangName = LANGUAGE_NAMES[lang] ?? lang;
+      const results: Array<{ videoId: string; translatedTitle: string; translatedDescription: string }> = [];
 
-    for (let i = 0; i < items.length; i += 10) {
-      const batch = items.slice(i, i + 10);
+      // Batch in groups of 10
+      for (let i = 0; i < items.length; i += 10) {
+        const batch = items.slice(i, i + 10);
 
-      const prompt = `You are a professional YouTube content translator. Translate the following YouTube video titles and descriptions into ${targetLangName}.
+        const prompt = `You are a professional YouTube content translator. Translate the following YouTube video titles and descriptions into ${targetLangName}.
 
 Rules:
 - Keep the translation natural and engaging for ${targetLangName}-speaking YouTube audience
@@ -137,18 +169,36 @@ ${JSON.stringify(
   2
 )}`;
 
-      const result = await model.generateContent(prompt);
-      const text = result.response.text();
+        const result = await model.generateContent(prompt);
+        const text = result.response.text();
 
-      // Extract JSON from response (handle markdown code blocks)
-      const jsonMatch = text.match(/\[[\s\S]*\]/);
-      if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0]);
-        results.push(...parsed);
+        const jsonMatch = text.match(/\[[\s\S]*\]/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          results.push(...parsed);
+        }
       }
+
+      translationsByLang[lang] = results;
     }
 
-    return NextResponse.json({ translations: results });
+    // Increment usage after successful translation
+    const usageResult = await incrementTranslatorUsage(
+      email,
+      videosCount,
+      limits.translatorDailyVideos,
+      limits.translatorMonthlyPool
+    );
+
+    const newDailyRemaining = Math.max(0, limits.translatorDailyVideos - usageResult.dailyUsed);
+    const newPoolRemaining = Math.max(0, limits.translatorMonthlyPool - usageResult.poolUsed);
+
+    return NextResponse.json({
+      translations: translationsByLang,
+      quotaUsed: videosCount,
+      dailyRemaining: newDailyRemaining,
+      poolRemaining: newPoolRemaining,
+    });
   } catch (error: unknown) {
     const message =
       error instanceof Error ? error.message : 'Translation failed';

@@ -11,6 +11,15 @@ export const tools: Tool[] = [
     category: 'Research',
   },
   {
+    slug: 'competitor-monitor',
+    title: 'Competitor Monitor',
+    description:
+      'Track rival YouTube channels and get daily alerts when their Shorts go viral. Stay ahead of competitors by spotting winning formats before they saturate your niche.',
+    icon: '📊',
+    status: 'active',
+    category: 'Research',
+  },
+  {
     slug: 'td-generator',
     title: 'YouTube TD Generator',
     description:

@@ -239,7 +239,7 @@ export function KeywordMonitor() {
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold text-text-primary">Your Monitors</h2>
         <Link
-          href="/tools/keyword-monitor/feed"
+          href="/account/feed"
           className="text-sm text-primary hover:underline flex items-center gap-1"
         >
           View video feed →

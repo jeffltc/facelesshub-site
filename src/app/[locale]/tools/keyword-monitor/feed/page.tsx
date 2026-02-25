@@ -11,6 +11,18 @@ export const metadata = {
 export default function FeedPage() {
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+      {/* Migration banner */}
+      <div className="flex items-center gap-3 bg-primary/5 border border-primary/20 rounded-xl px-4 py-3 mb-6 text-sm">
+        <span className="text-primary shrink-0">📌</span>
+        <span className="text-text-secondary">
+          Feed has moved!{' '}
+          <Link href="/account/feed" className="text-primary font-medium hover:underline">
+            View My Discoveries →
+          </Link>
+          {' '}for keyword + competitor results in one place.
+        </span>
+      </div>
+
       <div className="flex items-center justify-between mb-8">
         <Link
           href="/tools/keyword-monitor"

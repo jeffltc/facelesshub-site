@@ -31,6 +31,7 @@ export default async function LocaleLayout({
         />
         <script async src="https://www.googletagmanager.com/gtag/js?id=G-HPX3NBEYLY" />
         <script
+          suppressHydrationWarning
           dangerouslySetInnerHTML={{
             __html: `
               window.dataLayer = window.dataLayer || [];
