@@ -219,7 +219,13 @@
     "connecting_channel": "Verbinde...",
     "channel_connect_error": "Kanal konnte nicht verbunden werden",
     "channel_token_expired": "Kanalzugriff abgelaufen. Bitte erneut verbinden.",
-    "popup_blocked": "Popup blockiert. Bitte Popups für diese Seite erlauben."
+    "popup_blocked": "Popup blockiert. Bitte Popups für diese Seite erlauben.",
+    "already_translated_desc": "{count} von {total} ausgewählten Videos haben bereits alle Übersetzungen auf YouTube.",
+    "skip_existing": "Vorhandene überspringen ({count} Videos)",
+    "translate_all_confirm": "Alle neu übersetzen ({count} Videos)",
+    "write_all_btn": "Alle schreiben ({count})",
+    "write_video_btn": "Alle {count} Übersetzungen auf YouTube schreiben",
+    "writing_video": "Wird geschrieben..."
   },
   "yt_thumbnail": {
     "page_title": "YouTube Thumbnail Downloader",

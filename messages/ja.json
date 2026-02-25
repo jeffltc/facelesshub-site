@@ -219,7 +219,13 @@
     "connecting_channel": "接続中...",
     "channel_connect_error": "チャンネルの接続に失敗しました",
     "channel_token_expired": "チャンネルのアクセスが期限切れです。再接続してください。",
-    "popup_blocked": "ポップアップがブロックされました。このサイトのポップアップを許可してください。"
+    "popup_blocked": "ポップアップがブロックされました。このサイトのポップアップを許可してください。",
+    "already_translated_desc": "選択した {total} 件のうち、{count} 件はすべての翻訳が YouTube に存在します。",
+    "skip_existing": "既存をスキップ（{count} 件）",
+    "translate_all_confirm": "すべて再翻訳（{count} 件）",
+    "write_all_btn": "すべて書き込む（{count}）",
+    "write_video_btn": "{count} 件の翻訳をすべて YouTube に書き込む",
+    "writing_video": "書き込み中..."
   },
   "yt_thumbnail": {
     "page_title": "YouTubeサムネイルダウンローダー",

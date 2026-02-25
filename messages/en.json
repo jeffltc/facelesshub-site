@@ -220,7 +220,13 @@
     "connecting_channel": "Connecting...",
     "channel_connect_error": "Failed to connect channel",
     "channel_token_expired": "Channel access expired. Please reconnect.",
-    "popup_blocked": "Popup blocked. Allow popups for this site."
+    "popup_blocked": "Popup blocked. Allow popups for this site.",
+    "already_translated_desc": "{count} of {total} selected videos already have all translations on YouTube.",
+    "skip_existing": "Skip those ({count} videos)",
+    "translate_all_confirm": "Re-translate all ({count} videos)",
+    "write_all_btn": "Write All ({count})",
+    "write_video_btn": "Write all {count} translations to YouTube",
+    "writing_video": "Writing..."
   },
   "yt_thumbnail": {
     "page_title": "YouTube Thumbnail Downloader",

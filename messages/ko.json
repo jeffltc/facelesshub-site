@@ -219,7 +219,13 @@
     "connecting_channel": "연결 중...",
     "channel_connect_error": "채널 연결에 실패했습니다",
     "channel_token_expired": "채널 액세스가 만료되었습니다. 다시 연결해 주세요.",
-    "popup_blocked": "팝업이 차단되었습니다. 이 사이트의 팝업을 허용해 주세요."
+    "popup_blocked": "팝업이 차단되었습니다. 이 사이트의 팝업을 허용해 주세요.",
+    "already_translated_desc": "선택한 {total}개 중 {count}개는 YouTube에 모든 번역이 이미 있습니다.",
+    "skip_existing": "기존 건너뛰기 ({count}개)",
+    "translate_all_confirm": "모두 재번역 ({count}개)",
+    "write_all_btn": "모두 쓰기 ({count})",
+    "write_video_btn": "{count}개 번역 모두 YouTube에 쓰기",
+    "writing_video": "작성 중..."
   },
   "yt_thumbnail": {
     "page_title": "유튜브 썸네일 다운로더",

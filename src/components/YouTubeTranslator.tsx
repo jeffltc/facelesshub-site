@@ -41,7 +41,7 @@ interface QuotaInfo {
   poolRemaining: number;
 }
 
-type WriteBackResult = { success: boolean; error?: string };
+type WriteBackResult = { success: boolean; error?: string; loading?: boolean };
 
 export function YouTubeTranslator() {
   const { data: session, status: authStatus } = useSession();
@@ -80,8 +80,8 @@ export function YouTubeTranslator() {
   const [writeBackLoading, setWriteBackLoading] = useState(false);
   const [writeBackToast, setWriteBackToast] = useState<string | null>(null);
 
-  // Overwrite confirm modal
-  const [overwriteModal, setOverwriteModal] = useState<{ count: number } | null>(null);
+  // Confirm modal for re-translate
+  const [overwriteModal, setOverwriteModal] = useState<{ fullyDone: number; total: number } | null>(null);
   const [pendingTranslate, setPendingTranslate] = useState(false);
 
   // Upgrade modal
@@ -352,25 +352,34 @@ export function YouTubeTranslator() {
     }
   };
 
-  // Count how many selected videos already have any saved-language translation
-  const countAlreadyTranslated = () => {
+  // Count selected videos where ALL target languages already have YouTube localizations
+  const countFullyTranslated = () => {
     return videos.filter((v) => {
       if (!selectedIds.has(v.id)) return false;
-      if (!v.localizations) return false;
-      return savedLanguages.some((lang) => v.localizations?.[lang]);
+      if (!savedLanguages.length) return false;
+      return savedLanguages.every((lang) => !!v.localizations?.[lang]);
     }).length;
   };
 
-  const doTranslate = async () => {
+  const doTranslate = async (skipExisting = false) => {
     if (selectedIds.size === 0 || savedLanguages.length === 0) return;
     setTranslateStatus('loading');
     setTranslationsByLang({});
     setError('');
     setPendingTranslate(false);
 
-    const items = videos
-      .filter((v) => selectedIds.has(v.id))
-      .map((v) => ({ videoId: v.id, title: v.title, description: v.description }));
+    const allSelected = videos.filter((v) => selectedIds.has(v.id));
+
+    // When skipping: exclude videos where ALL target languages already exist on YouTube
+    const items = (skipExisting
+      ? allSelected.filter((v) => !savedLanguages.every((lang) => !!v.localizations?.[lang]))
+      : allSelected
+    ).map((v) => ({ videoId: v.id, title: v.title, description: v.description }));
+
+    if (items.length === 0) {
+      setTranslateStatus('idle');
+      return;
+    }
 
     try {
       const res = await fetch('/api/translate', {
@@ -428,11 +437,11 @@ export function YouTubeTranslator() {
   };
 
   const handleTranslate = () => {
-    const alreadyCount = countAlreadyTranslated();
-    if (alreadyCount > 0) {
-      setOverwriteModal({ count: alreadyCount });
+    const fullyDone = countFullyTranslated();
+    if (fullyDone > 0) {
+      setOverwriteModal({ fullyDone, total: selectedIds.size });
     } else {
-      doTranslate();
+      doTranslate(false);
     }
   };
 
@@ -484,6 +493,38 @@ export function YouTubeTranslator() {
       setError(err instanceof Error ? err.message : 'Write-back failed');
     } finally {
       setWriteBackLoading(false);
+    }
+  };
+
+  const handleWriteBackOne = async (videoId: string) => {
+    if (!selectedChannelId) return;
+
+    const updates = Object.entries(translationsByLang)
+      .filter(([, trs]) => trs.some((tr) => tr.videoId === videoId))
+      .map(([lang, trs]) => {
+        const tr = trs.find((tr) => tr.videoId === videoId)!;
+        return { videoId, language: lang, title: tr.translatedTitle, description: tr.translatedDescription };
+      });
+
+    if (!updates.length) return;
+
+    setWriteBackResults((prev) => ({ ...prev, [videoId]: { success: false, loading: true } }));
+
+    try {
+      const res = await fetch('/api/youtube/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ channelId: selectedChannelId, updates }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
+      const ok = data.results?.[0]?.success !== false;
+      setWriteBackResults((prev) => ({ ...prev, [videoId]: { success: ok, error: data.results?.[0]?.error } }));
+    } catch (err) {
+      setWriteBackResults((prev) => ({
+        ...prev,
+        [videoId]: { success: false, error: err instanceof Error ? err.message : 'Failed' },
+      }));
     }
   };
 
@@ -554,15 +595,15 @@ export function YouTubeTranslator() {
         message={upgradeModal?.message}
       />
 
-      {/* Overwrite confirm modal */}
+      {/* Re-translate confirm modal */}
       {overwriteModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
           <div className="bg-surface border border-border rounded-xl p-6 max-w-sm w-full mx-4 space-y-4">
             <h3 className="text-text-primary font-semibold text-lg">{t('overwrite_title')}</h3>
             <p className="text-text-secondary text-sm">
-              {t('already_translated_warning', { count: overwriteModal.count })}
+              {t('already_translated_desc', { count: overwriteModal.fullyDone, total: overwriteModal.total })}
             </p>
-            <div className="flex gap-3 justify-end">
+            <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
               <button
                 onClick={() => setOverwriteModal(null)}
                 className="px-4 py-2 text-sm text-text-secondary border border-border rounded-lg hover:border-primary/50 transition-colors"
@@ -570,13 +611,16 @@ export function YouTubeTranslator() {
                 {t('cancel')}
               </button>
               <button
-                onClick={() => {
-                  setOverwriteModal(null);
-                  doTranslate();
-                }}
+                onClick={() => { setOverwriteModal(null); doTranslate(true); }}
+                className="px-4 py-2 text-sm border border-primary text-primary hover:bg-primary/10 rounded-lg transition-colors"
+              >
+                {t('skip_existing', { count: overwriteModal.total - overwriteModal.fullyDone })}
+              </button>
+              <button
+                onClick={() => { setOverwriteModal(null); doTranslate(false); }}
                 className="px-4 py-2 text-sm bg-primary hover:bg-primary-hover text-white rounded-lg transition-colors"
               >
-                {t('overwrite_confirm', { count: selectedCount })}
+                {t('translate_all_confirm', { count: overwriteModal.total })}
               </button>
             </div>
           </div>
@@ -800,12 +844,31 @@ export function YouTubeTranslator() {
           ) : null}
         </div>
 
-        <div className="flex gap-3 items-center">
+        <div className="flex gap-3 items-center flex-wrap">
           {selectedCount > 0 && savedLanguages.length > 0 && (
             <span className="text-xs text-text-secondary">
               {t('quota_cost', { count: selectedCount })}
             </span>
           )}
+          {/* Write All — always visible, disabled when no translations */}
+          <button
+            onClick={handleWriteBackAll}
+            disabled={writeBackLoading || !hasTranslations || !selectedChannelId}
+            className="border border-border text-text-secondary hover:border-primary hover:text-primary disabled:opacity-40 disabled:cursor-not-allowed font-medium rounded-lg px-4 py-2 transition-colors whitespace-nowrap text-sm"
+          >
+            {writeBackLoading ? (
+              <span className="flex items-center gap-2">
+                <span className="animate-spin rounded-full h-3 w-3 border-b-2 border-current" />
+                {t('writing_back')}
+              </span>
+            ) : (
+              t('write_all_btn', {
+                count: new Set(
+                  Object.values(translationsByLang).flatMap((trs) => trs.map((tr) => tr.videoId))
+                ).size,
+              })
+            )}
+          </button>
           <button
             onClick={handleTranslate}
             disabled={!canTranslate}
@@ -941,23 +1004,54 @@ export function YouTubeTranslator() {
                   {/* E. Translation results — per-video language tabs */}
                   {hasResult && (
                     <div className="border-t border-border bg-background/50">
-                      {/* Language tabs */}
-                      <div className="flex items-center gap-1 px-4 pt-3">
-                        {savedLanguages
-                          .filter((lang) => videoTranslations[lang]?.find((tr) => tr.videoId === video.id))
-                          .map((lang) => (
+                      {/* Language tabs + per-video write button */}
+                      <div className="flex items-center justify-between px-4 pt-3">
+                        <div className="flex items-center gap-1 flex-wrap">
+                          {savedLanguages
+                            .filter((lang) => videoTranslations[lang]?.find((tr) => tr.videoId === video.id))
+                            .map((lang) => (
+                              <button
+                                key={lang}
+                                onClick={() => setActiveTabs((prev) => ({ ...prev, [video.id]: lang }))}
+                                className={`text-xs px-3 py-1 rounded-md transition-colors ${
+                                  activeTab === lang
+                                    ? 'bg-primary text-white'
+                                    : 'text-text-secondary hover:text-primary'
+                                }`}
+                              >
+                                {langName(lang)}
+                              </button>
+                            ))}
+                        </div>
+                        {/* Per-video write-back — writes ALL language tabs for this video */}
+                        {(() => {
+                          const videoLangs = savedLanguages.filter(
+                            (lang) => videoTranslations[lang]?.find((tr) => tr.videoId === video.id)
+                          );
+                          const vbResult = writeBackResults[video.id];
+                          if (vbResult?.success) {
+                            return (
+                              <span className="text-xs text-success shrink-0">✓ {t('written')}</span>
+                            );
+                          }
+                          return (
                             <button
-                              key={lang}
-                              onClick={() => setActiveTabs((prev) => ({ ...prev, [video.id]: lang }))}
-                              className={`text-xs px-3 py-1 rounded-md transition-colors ${
-                                activeTab === lang
-                                  ? 'bg-primary text-white'
-                                  : 'text-text-secondary hover:text-primary'
-                              }`}
+                              onClick={() => handleWriteBackOne(video.id)}
+                              disabled={!!vbResult?.loading || !selectedChannelId}
+                              title={videoLangs.map(langName).join(', ')}
+                              className="text-xs border border-border text-text-secondary hover:border-primary hover:text-primary disabled:opacity-50 disabled:cursor-not-allowed rounded px-2 py-1 transition-colors shrink-0 flex items-center gap-1"
                             >
-                              {langName(lang)}
+                              {vbResult?.loading ? (
+                                <>
+                                  <span className="animate-spin rounded-full h-3 w-3 border-b-2 border-current" />
+                                  {t('writing_video')}
+                                </>
+                              ) : (
+                                t('write_video_btn', { count: videoLangs.length })
+                              )}
                             </button>
-                          ))}
+                          );
+                        })()}
                       </div>
 
                       {activeTranslation && (
@@ -1000,36 +1094,6 @@ export function YouTubeTranslator() {
         )}
       </div>
 
-      {/* F. Batch write-back */}
-      {hasTranslations && (
-        <div className="flex items-center justify-between bg-surface border border-border rounded-lg p-4">
-          <p className="text-sm text-text-primary">
-            {t('batch_write_desc', {
-              count: new Set(
-                Object.values(translationsByLang).flatMap((trs) => trs.map((tr) => tr.videoId))
-              ).size,
-            })}
-          </p>
-          <button
-            onClick={handleWriteBackAll}
-            disabled={writeBackLoading || !selectedChannelId}
-            className="bg-primary hover:bg-primary-hover disabled:opacity-50 text-white font-medium rounded-lg px-6 py-2 transition-colors text-sm whitespace-nowrap"
-          >
-            {writeBackLoading ? (
-              <span className="flex items-center gap-2">
-                <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                {t('writing_back')}
-              </span>
-            ) : (
-              t('write_all', {
-                count: new Set(
-                  Object.values(translationsByLang).flatMap((trs) => trs.map((tr) => tr.videoId))
-                ).size,
-              })
-            )}
-          </button>
-        </div>
-      )}
     </div>
   );
 }
