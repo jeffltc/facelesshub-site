@@ -225,7 +225,9 @@
     "translate_all_confirm": "すべて再翻訳（{count} 件）",
     "write_all_btn": "すべて書き込む（{count}）",
     "write_video_btn": "{count} 件の翻訳をすべて YouTube に書き込む",
-    "writing_video": "書き込み中..."
+    "writing_video": "書き込み中...",
+    "auto_write_back": "翻訳後に自動書き込み",
+    "translate_and_write": "翻訳して書き込む（{count}）"
   },
   "yt_thumbnail": {
     "page_title": "YouTubeサムネイルダウンローダー",

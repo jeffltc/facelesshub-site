@@ -225,7 +225,9 @@
     "translate_all_confirm": "모두 재번역 ({count}개)",
     "write_all_btn": "모두 쓰기 ({count})",
     "write_video_btn": "{count}개 번역 모두 YouTube에 쓰기",
-    "writing_video": "작성 중..."
+    "writing_video": "작성 중...",
+    "auto_write_back": "번역 후 자동 쓰기",
+    "translate_and_write": "번역 및 쓰기 ({count})"
   },
   "yt_thumbnail": {
     "page_title": "유튜브 썸네일 다운로더",

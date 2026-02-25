@@ -226,7 +226,9 @@
     "translate_all_confirm": "Re-translate all ({count} videos)",
     "write_all_btn": "Write All ({count})",
     "write_video_btn": "Write all {count} translations to YouTube",
-    "writing_video": "Writing..."
+    "writing_video": "Writing...",
+    "auto_write_back": "Auto write-back",
+    "translate_and_write": "Translate & Write ({count})"
   },
   "yt_thumbnail": {
     "page_title": "YouTube Thumbnail Downloader",

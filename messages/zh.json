@@ -225,7 +225,9 @@
     "translate_all_confirm": "全部重新翻译（{count} 个）",
     "write_all_btn": "全部写回（{count}）",
     "write_video_btn": "写回全部 {count} 个翻译版本",
-    "writing_video": "写回中..."
+    "writing_video": "写回中...",
+    "auto_write_back": "翻译后自动写回",
+    "translate_and_write": "翻译并写回（{count}）"
   },
   "yt_thumbnail": {
     "page_title": "YouTube 缩略图下载器",

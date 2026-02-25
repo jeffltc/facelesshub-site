@@ -80,6 +80,9 @@ export function YouTubeTranslator() {
   const [writeBackLoading, setWriteBackLoading] = useState(false);
   const [writeBackToast, setWriteBackToast] = useState<string | null>(null);
 
+  // Auto write-back toggle
+  const [autoWriteBack, setAutoWriteBack] = useState(false);
+
   // Confirm modal for re-translate
   const [overwriteModal, setOverwriteModal] = useState<{ fullyDone: number; total: number } | null>(null);
   const [pendingTranslate, setPendingTranslate] = useState(false);
@@ -416,8 +419,14 @@ export function YouTubeTranslator() {
         throw new Error(data.error ?? 'Translation failed');
       }
 
-      setTranslationsByLang(data.translations ?? {});
+      const freshTranslations: Record<string, Translation[]> = data.translations ?? {};
+      setTranslationsByLang(freshTranslations);
       setTranslateStatus('success');
+
+      // Auto write-back: use fresh data directly (state not yet flushed)
+      if (autoWriteBack && Object.keys(freshTranslations).length > 0) {
+        await executeWriteBack(freshTranslations);
+      }
 
       // Update quota info
       if (data.dailyRemaining !== undefined) {
@@ -455,16 +464,17 @@ export function YouTubeTranslator() {
     }
   };
 
-  const handleWriteBackAll = async () => {
+  // Core write-back logic — accepts translations directly to avoid stale-state issues
+  const executeWriteBack = async (translations: Record<string, Translation[]>) => {
     if (!selectedChannelId) return;
-    const langEntries = Object.entries(translationsByLang);
+    const langEntries = Object.entries(translations);
     if (langEntries.length === 0) return;
 
     setWriteBackLoading(true);
     setWriteBackResults({});
 
-    const updates = langEntries.flatMap(([lang, translations]) =>
-      translations.map((tr) => ({
+    const updates = langEntries.flatMap(([lang, trs]) =>
+      trs.map((tr) => ({
         videoId: tr.videoId,
         language: lang,
         title: tr.translatedTitle,
@@ -482,7 +492,6 @@ export function YouTubeTranslator() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
 
-      // Map results per videoId
       const results: Record<string, WriteBackResult> = {};
       (data.results ?? []).forEach((r: { videoId: string; success: boolean; error?: string }) => {
         results[r.videoId] = { success: r.success, error: r.error };
@@ -505,6 +514,11 @@ export function YouTubeTranslator() {
       setWriteBackLoading(false);
     }
   };
+
+  const handleWriteBackAll = async () => {
+    await executeWriteBack(translationsByLang);
+  };
+
 
   const handleWriteBackOne = async (videoId: string) => {
     if (!selectedChannelId) return;
@@ -860,25 +874,47 @@ export function YouTubeTranslator() {
               {t('quota_cost', { count: selectedCount })}
             </span>
           )}
-          {/* Write All — always visible, disabled when no translations */}
-          <button
-            onClick={handleWriteBackAll}
-            disabled={writeBackLoading || !hasTranslations || !selectedChannelId}
-            className="border border-border text-text-secondary hover:border-primary hover:text-primary disabled:opacity-40 disabled:cursor-not-allowed font-medium rounded-lg px-4 py-2 transition-colors whitespace-nowrap text-sm"
-          >
-            {writeBackLoading ? (
-              <span className="flex items-center gap-2">
-                <span className="animate-spin rounded-full h-3 w-3 border-b-2 border-current" />
-                {t('writing_back')}
-              </span>
-            ) : (
-              t('write_all_btn', {
-                count: new Set(
-                  Object.values(translationsByLang).flatMap((trs) => trs.map((tr) => tr.videoId))
-                ).size,
-              })
-            )}
-          </button>
+
+          {/* Auto write-back toggle */}
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={autoWriteBack}
+              onChange={(e) => setAutoWriteBack(e.target.checked)}
+              className="accent-primary w-4 h-4"
+            />
+            <span className="text-sm text-text-secondary whitespace-nowrap">
+              {t('auto_write_back')}
+            </span>
+          </label>
+
+          {/* Write All — only shown when auto write-back is OFF */}
+          {!autoWriteBack && (
+            <button
+              onClick={handleWriteBackAll}
+              disabled={writeBackLoading || !hasTranslations || !selectedChannelId}
+              className={`font-medium rounded-lg px-4 py-2 transition-colors whitespace-nowrap text-sm border ${
+                hasTranslations && !writeBackLoading
+                  ? 'border-primary text-primary hover:bg-primary/10'
+                  : 'border-border text-text-secondary opacity-40 cursor-not-allowed'
+              }`}
+            >
+              {writeBackLoading ? (
+                <span className="flex items-center gap-2">
+                  <span className="animate-spin rounded-full h-3 w-3 border-b-2 border-current" />
+                  {t('writing_back')}
+                </span>
+              ) : (
+                t('write_all_btn', {
+                  count: new Set(
+                    Object.values(translationsByLang).flatMap((trs) => trs.map((tr) => tr.videoId))
+                  ).size,
+                })
+              )}
+            </button>
+          )}
+
+          {/* Translate button — label changes based on auto write-back */}
           <button
             onClick={handleTranslate}
             disabled={!canTranslate}
@@ -887,8 +923,10 @@ export function YouTubeTranslator() {
             {translateStatus === 'loading' ? (
               <span className="flex items-center gap-2">
                 <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                {t('translating')}
+                {autoWriteBack ? t('writing_back') : t('translating')}
               </span>
+            ) : autoWriteBack ? (
+              t('translate_and_write', { count: selectedCount })
             ) : (
               t('translate_selected', { count: selectedCount })
             )}

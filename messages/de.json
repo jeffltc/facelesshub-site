@@ -225,7 +225,9 @@
     "translate_all_confirm": "Alle neu übersetzen ({count} Videos)",
     "write_all_btn": "Alle schreiben ({count})",
     "write_video_btn": "Alle {count} Übersetzungen auf YouTube schreiben",
-    "writing_video": "Wird geschrieben..."
+    "writing_video": "Wird geschrieben...",
+    "auto_write_back": "Auto-Zurückschreiben",
+    "translate_and_write": "Übersetzen & Schreiben ({count})"
   },
   "yt_thumbnail": {
     "page_title": "YouTube Thumbnail Downloader",
