@@ -71,6 +71,7 @@ export function YouTubeTranslator() {
   // Translations keyed by language code
   const [translationsByLang, setTranslationsByLang] = useState<Record<string, Translation[]>>({});
   const [translateStatus, setTranslateStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [translateProgress, setTranslateProgress] = useState<{ index: number; total: number; langName: string } | null>(null);
 
   // Per-video active tab in results
   const [activeTabs, setActiveTabs] = useState<Record<string, string>>({});
@@ -378,6 +379,7 @@ export function YouTubeTranslator() {
     if (selectedIds.size === 0 || savedLanguages.length === 0) return;
     setTranslateStatus('loading');
     setTranslationsByLang({});
+    setTranslateProgress(null);
     setError('');
     setPendingTranslate(false);
 
@@ -401,9 +403,9 @@ export function YouTubeTranslator() {
         body: JSON.stringify({ items, targetLanguages: savedLanguages }),
       });
 
-      const data = await res.json();
-
+      // Non-2xx means pre-stream error (auth, quota, plan limit)
       if (!res.ok) {
+        const data = await res.json();
         if (data.code === 'PLAN_LIMIT_EXCEEDED') {
           setUpgradeModal({ plan: data.plan, message: data.error });
           setTranslateStatus('idle');
@@ -419,39 +421,76 @@ export function YouTubeTranslator() {
         throw new Error(data.error ?? 'Translation failed');
       }
 
-      const freshTranslations: Record<string, Translation[]> = data.translations ?? {};
-      setTranslationsByLang(freshTranslations);
-      setTranslateStatus('success');
+      // Consume SSE stream
+      const reader = res.body!.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      const freshTranslations: Record<string, Translation[]> = {};
 
-      // Auto write-back: use fresh data directly (state not yet flushed)
-      if (autoWriteBack && Object.keys(freshTranslations).length > 0) {
-        await executeWriteBack(freshTranslations);
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() ?? '';
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          let event: Record<string, unknown>;
+          try { event = JSON.parse(line.slice(6)); } catch { continue; }
+
+          if (event.type === 'progress') {
+            setTranslateProgress({
+              index: event.index as number,
+              total: event.total as number,
+              langName: event.langName as string,
+            });
+          } else if (event.type === 'result') {
+            const lang = event.language as string;
+            const trs = event.translations as Translation[];
+            freshTranslations[lang] = trs;
+            setTranslationsByLang((prev) => ({ ...prev, [lang]: trs }));
+          } else if (event.type === 'done') {
+            // Update quota display
+            if (event.dailyRemaining !== undefined) {
+              setQuotaInfo((prev) =>
+                prev
+                  ? {
+                      ...prev,
+                      dailyRemaining: event.dailyRemaining as number,
+                      poolRemaining: (event.poolRemaining as number) ?? prev.poolRemaining,
+                    }
+                  : prev
+              );
+            }
+          } else if (event.type === 'error') {
+            setError((event.message as string) ?? 'Translation failed. Please try again.');
+            setTranslateStatus('error');
+            setTranslateProgress(null);
+            return;
+          }
+        }
       }
 
-      // Update quota info
-      if (data.dailyRemaining !== undefined) {
-        setQuotaInfo((prev) =>
-          prev
-            ? {
-                ...prev,
-                dailyRemaining: data.dailyRemaining,
-                poolRemaining: data.poolRemaining ?? prev.poolRemaining,
-              }
-            : prev
-        );
+      setTranslateStatus('success');
+      setTranslateProgress(null);
+
+      // Auto write-back using fresh data (bypasses stale state)
+      if (autoWriteBack && Object.keys(freshTranslations).length > 0) {
+        await executeWriteBack(freshTranslations);
       }
 
       // Set default active tab per video to first saved language
       if (savedLanguages.length > 0) {
         const tabs: Record<string, string> = {};
-        items.forEach((item) => {
-          tabs[item.videoId] = savedLanguages[0];
-        });
+        items.forEach((item) => { tabs[item.videoId] = savedLanguages[0]; });
         setActiveTabs(tabs);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Translation failed');
+      setError('Translation failed. Please try again.');
       setTranslateStatus('error');
+      setTranslateProgress(null);
     }
   };
 
@@ -914,16 +953,28 @@ export function YouTubeTranslator() {
             </button>
           )}
 
-          {/* Translate button — label changes based on auto write-back */}
+          {/* Translate button — label changes based on auto write-back + progress */}
           <button
             onClick={handleTranslate}
             disabled={!canTranslate}
-            className="bg-primary hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium rounded-lg px-6 py-2 transition-colors whitespace-nowrap"
+            className="bg-primary hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium rounded-lg px-6 py-2 transition-colors whitespace-nowrap min-w-[180px]"
           >
             {translateStatus === 'loading' ? (
-              <span className="flex items-center gap-2">
-                <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                {autoWriteBack ? t('writing_back') : t('translating')}
+              <span className="flex flex-col items-center gap-1">
+                <span className="flex items-center gap-2">
+                  <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                  {translateProgress
+                    ? `${translateProgress.langName} (${translateProgress.index}/${translateProgress.total})`
+                    : t('translating')}
+                </span>
+                {translateProgress && (
+                  <span className="w-full bg-white/20 rounded-full h-1 overflow-hidden">
+                    <span
+                      className="block bg-white h-1 rounded-full transition-all duration-500"
+                      style={{ width: `${(translateProgress.index / translateProgress.total) * 100}%` }}
+                    />
+                  </span>
+                )}
               </span>
             ) : autoWriteBack ? (
               t('translate_and_write', { count: selectedCount })
