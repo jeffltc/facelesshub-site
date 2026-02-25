@@ -260,5 +260,13 @@
     "not_found": "ページが見つかりません",
     "not_found_desc": "お探しのページは存在しないか、移動されました。",
     "go_home": "ホームへ"
+  },
+  "help": {
+    "panel_title": "サポートが必要ですか？",
+    "panel_desc": "ご質問や問題がありましたら、お気軽にお問い合わせください。",
+    "email_label": "メールはこちら",
+    "copy_button": "コピー",
+    "copied": "コピーしました！",
+    "send_button": "メールを送る"
   }
 }

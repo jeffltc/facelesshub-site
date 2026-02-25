@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { routing } from '@/i18n/routing';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
+import { HelpButton } from '@/components/HelpButton';
 import { SessionProvider } from '@/components/SessionProvider';
 
 export default async function LocaleLayout({
@@ -49,6 +50,7 @@ export default async function LocaleLayout({
             <Header />
             <main className="flex-1">{children}</main>
             <Footer />
+            <HelpButton />
           </SessionProvider>
         </NextIntlClientProvider>
       </body>

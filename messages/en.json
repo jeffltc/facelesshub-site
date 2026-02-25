@@ -261,5 +261,13 @@
     "not_found": "Page not found",
     "not_found_desc": "The page you're looking for doesn't exist or has been moved.",
     "go_home": "Go Home"
+  },
+  "help": {
+    "panel_title": "Need help?",
+    "panel_desc": "Have a question or ran into an issue? We're happy to help.",
+    "email_label": "Email us at",
+    "copy_button": "Copy",
+    "copied": "Copied!",
+    "send_button": "Send Email"
   }
 }

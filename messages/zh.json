@@ -260,5 +260,13 @@
     "not_found": "页面未找到",
     "not_found_desc": "你要找的页面不存在或已被移动。",
     "go_home": "返回首页"
+  },
+  "help": {
+    "panel_title": "需要帮助？",
+    "panel_desc": "有任何问题或疑问？我们随时为您提供支持。",
+    "email_label": "发邮件至",
+    "copy_button": "复制",
+    "copied": "已复制！",
+    "send_button": "发送邮件"
   }
 }

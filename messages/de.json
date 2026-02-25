@@ -260,5 +260,13 @@
     "not_found": "Seite nicht gefunden",
     "not_found_desc": "Die gesuchte Seite existiert nicht oder wurde verschoben.",
     "go_home": "Zur Startseite"
+  },
+  "help": {
+    "panel_title": "Hilfe benötigt?",
+    "panel_desc": "Haben Sie eine Frage oder ein Problem? Wir helfen gerne.",
+    "email_label": "Schreiben Sie uns",
+    "copy_button": "Kopieren",
+    "copied": "Kopiert!",
+    "send_button": "E-Mail senden"
   }
 }
