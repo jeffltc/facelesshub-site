@@ -271,10 +271,20 @@ export function YouTubeTranslator() {
 
       // Apply settings
       if (settingsData) {
-        setSavedLanguages(settingsData.targetLanguages ?? []);
+        const langs: string[] = settingsData.targetLanguages ?? [];
+        setSavedLanguages(langs);
         setMaxLanguages(settingsData.maxLanguages ?? 2);
         setUserPlan(settingsData.plan ?? 'free');
         setAllLanguages(settingsData.availableLanguages ?? { free: [], premium: [] });
+
+        // First-time user: persist the computed defaults so they stick on next load
+        if (!settingsData.hasExistingSettings && langs.length > 0) {
+          fetch('/api/translator/settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ targetLanguages: langs }),
+          }).catch(() => null);
+        }
       }
       setSettingsLoading(false);
 

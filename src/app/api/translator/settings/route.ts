@@ -6,6 +6,17 @@ import { FREE_LANGUAGES, LANGUAGE_NAMES } from '@/app/api/translate/route';
 
 const FREE_LANG_CODES = FREE_LANGUAGES as readonly string[];
 
+// Popularity-ranked language order for default slot-filling
+const TOP_LANGUAGE_ORDER = [
+  'zh', 'es', 'ja', 'ko', 'fr', 'de', 'pt', 'ar',
+  'hi', 'ru', 'it', 'th', 'vi', 'id', 'tr', 'nl', 'pl', 'sv', 'da',
+];
+
+function computeDefaultLanguages(maxLanguages: number): string[] {
+  const available = TOP_LANGUAGE_ORDER.filter((c) => LANGUAGE_NAMES[c]);
+  return available.slice(0, Math.min(maxLanguages, available.length));
+}
+
 export async function GET() {
   const session = await auth();
   if (!session?.user?.email) {
@@ -23,7 +34,14 @@ export async function GET() {
     .eq('email', email)
     .single();
 
-  const targetLanguages: string[] = data?.target_languages ?? ['zh', 'es'];
+  // hasExistingSettings: true if user has ever saved settings
+  const hasExistingSettings = !!data;
+
+  // Use saved languages if available (even empty []), else compute plan-based defaults
+  const targetLanguages: string[] = hasExistingSettings
+    ? (data.target_languages ?? [])
+    : computeDefaultLanguages(limits.translatorMaxLanguages);
+
   const selectedChannelId: string | null = data?.selected_channel_id ?? null;
 
   // Build language lists based on plan
@@ -43,6 +61,7 @@ export async function GET() {
     maxLanguages: limits.translatorMaxLanguages,
     plan,
     availableLanguages,
+    hasExistingSettings,
   });
 }
 
