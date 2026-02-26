@@ -1,7 +1,6 @@
 import { useTranslations } from 'next-intl';
 import { getTranslations } from 'next-intl/server';
 import { Link } from '@/i18n/navigation';
-import { SessionProvider } from '@/components/SessionProvider';
 import { YouTubeTranslator } from '@/components/YouTubeTranslator';
 
 const SITE_URL = 'https://facelesschannel.net';
@@ -80,9 +79,7 @@ export default function YouTubeTranslatorPage() {
         </div>
       </div>
 
-      <SessionProvider>
-        <YouTubeTranslator />
-      </SessionProvider>
+      <YouTubeTranslator />
 
       {/* How it works */}
       <section className="mt-16 pt-10 border-t border-border">
